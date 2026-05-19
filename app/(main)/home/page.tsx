@@ -4,7 +4,7 @@ const Home = () => {
     <>
       <div className='flex'>
         <div>
-          
+          <h1>gtgh</h1>
         </div>
         <div>
 

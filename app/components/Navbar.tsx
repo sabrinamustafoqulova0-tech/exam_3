@@ -158,7 +158,7 @@ export default function Sidebar() {
           </button>
         </Link>
         <Link
-          href="/create"
+          href="/more"
           className="flex mt-[50px] items-center  hover:bg-gray-100  rounded-xl"
         >
           <button className="flex items-center gap-4 hover:bg-gray-100 p-3 rounded-xl">
