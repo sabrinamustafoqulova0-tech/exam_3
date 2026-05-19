@@ -2,17 +2,22 @@
 import React, { useState } from "react";
 import "../../globals.css";
 import { useRegisterMutation } from "@/app/services/authApi";
+import { useRouter } from "next/router";
+import VisibilityIcon from "@mui/icons-material/Visibility";
+import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
 
 const Login = () => {
+  const router = useRouter();
   const [userName, setUserName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [fullName, setFullName] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   const [register, { isLoading, error }] = useRegisterMutation();
 
-  async function handleRegister(e:any) {
+  async function handleRegister(e: any) {
     e.preventDefault();
 
     try {
@@ -26,7 +31,7 @@ const Login = () => {
 
       console.log(res);
 
-      alert("User created");
+      router.push("/login");
     } catch (err) {
       console.log(err);
     }
@@ -96,17 +101,24 @@ const Login = () => {
 
               <div className="relative">
                 <input
-                  type="password"
-                  placeholder="password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full h-[38px] border border-gray-300 bg-[#fafafa] rounded-[3px] px-3 text-xs outline-none focus:border-gray-400"
                 />
 
-                <span className="absolute right-3 top-[10px] text-gray-500 cursor-pointer">
-                  👁
-                </span>
-                
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-[8px] text-gray-500"
+                >
+                  {showPassword ? (
+                    <VisibilityOffIcon fontSize="small" />
+                  ) : (
+                    <VisibilityIcon fontSize="small" />
+                  )}
+                </button>
               </div>
               <p className="text-gray-500 text-[15px]">
                 By signing up, you agree to our Terms , Privacy Policy and
