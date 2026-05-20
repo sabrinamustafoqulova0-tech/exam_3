@@ -24,12 +24,11 @@ const Login = () => {
         password,
       }).unwrap();
 
-      if (res) {
-        const token = res?.data?.data || res?.token || res;
-        SaveToken(token);
+      const token = res.data;
 
-        router.push("/home");
-      }
+      SaveToken(token);
+
+      router.push("/home");
     } catch (err) {
       console.log(err);
     }
