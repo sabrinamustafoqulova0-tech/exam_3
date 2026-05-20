@@ -25,7 +25,7 @@ const Login = () => {
       }).unwrap();
 
       if (res) {
-        const token = res?.data?.data || res?.token || res;
+        const token = typeof res === 'string' ? res : (res?.data?.data || res?.data || res?.token);
         SaveToken(token);
 
         router.push("/home");
