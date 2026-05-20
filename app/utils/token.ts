@@ -21,6 +21,7 @@ export function GetToken(){
 MyAxios.interceptors.request.use(
     (config)=>{
         const token=GetToken()
+        console.log(token, "kk");
         if(token){
             config.headers["Authorization"]= `Bearer ${token}`
         }
