@@ -4,6 +4,8 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useGetUsersQuery } from '../../services/Search'
 
+const IMAGE_BASE_URL = process.env.NEXT_PUBLIC_IMAGES || 'https://instagram-api.softclub.tj/images'
+
 export default function Navbar() {
   const router = useRouter()
   const [isOpenSearch, setIsOpenSearch] = useState(false)
@@ -17,7 +19,7 @@ export default function Navbar() {
     }, 400) // Запрос пойдет через 400мс после остановки ввода
 
     return () => clearTimeout(handler)
-  }, [searchQuery])
+  }, [searchQuery]) 
 
   // RTK Query: Отправляем запрос ТОЛЬКО если панель открыта И в инпуте что-то написано
   const { data: filteredUsers = [], isLoading, isFetching } = useGetUsersQuery(debouncedQuery, {
@@ -33,11 +35,11 @@ export default function Navbar() {
   }
 
   const handleUserClick = (userId: string) => {
-    setIsOpenSearch(false) 
-    setSearchQuery('')     
+    setIsOpenSearch(false)
+    setSearchQuery('')
     setDebouncedQuery('')
-    // Если профили динамические (например сторонний юзер):
-    router.push(`/profile/${userId}`)
+    // Переход на страницу чужого профиля по id пользователя
+    router.push(`/user/${userId}`)
   }
 
   return (
@@ -150,8 +152,12 @@ export default function Navbar() {
                   <div className="text-[#8e8e8e] text-center py-6 text-[14px]">Поиск аккаунтов...</div>
                 ) : filteredUsers.length > 0 ? (
                   filteredUsers.map((user: any) => {
-                    // Исправление бага аватара: проверяем все возможные варианты полей из бэка
-                    const userAvatar = user?.avatar || user?.imagePath || user?.image || "/images/default-avatar.svg";
+                    // Исправление бага аватара: поддерживаем относительный путь и полный URL
+                    const rawAvatar = (user?.avatar || user?.imagePath || user?.image || '').trim()
+                    const userAvatar = rawAvatar
+                      ? (rawAvatar.startsWith('http') ? rawAvatar : `${IMAGE_BASE_URL}/${rawAvatar}`)
+                      : ''
+                    const hasAvatar = Boolean(userAvatar)
                     
                     return (
                       <div 
@@ -159,15 +165,19 @@ export default function Navbar() {
                         onClick={() => handleUserClick(user.id)}
                         className="flex items-center gap-3 p-2 rounded-lg hover:bg-[#fafafa] cursor-pointer transition-colors"
                       >
-                        <div className="w-11 h-11 rounded-full bg-[#fafafa] overflow-hidden border border-[#dbdbdb] flex-shrink-0">
-                          <img 
-                            src={userAvatar} 
-                            alt="" 
-                            className="w-full h-full object-cover"
-                            onError={(e) => {
-                              (e.target as HTMLImageElement).src = "/images/default-avatar.svg";
-                            }}
-                          />
+                        <div className="w-11 h-11 rounded-full bg-[#fafafa] overflow-hidden border border-[#dbdbdb] flex-shrink-0 flex items-center justify-center text-[12px] font-semibold text-[#262626] uppercase">
+                          {hasAvatar ? (
+                            <img 
+                              src={userAvatar} 
+                              alt={user.userName || user.fullName || 'User'} 
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                ;(e.target as HTMLImageElement).src = ''
+                              }}
+                            />
+                          ) : (
+                            <span>User</span>
+                          )}
                         </div>
                         <div className="flex flex-col overflow-hidden">
                           <span className="text-[14px] font-semibold text-[#262626] truncate">{user.userName || 'username'}</span>

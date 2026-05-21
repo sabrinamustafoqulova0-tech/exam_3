@@ -6,7 +6,6 @@ export const profileApi = createApi({
   baseQuery: fetchBaseQuery({
     baseUrl: Api,
     prepareHeaders: (headers) => {
-      // Подставляем правильный ключ из твоего Local Storage
       const token = localStorage.getItem("store_token");
       if (token) {
         headers.set("authorization", `Bearer ${token}`);
@@ -14,112 +13,150 @@ export const profileApi = createApi({
       return headers;
     },
   }),
-  tagTypes: ["MyProfile"],
+  // Теги для управления кэшем и автоматического обновления интерфейса
+  tagTypes: ["MyProfile", "UserProfile", "FollowStatus", "AllPosts"],
   endpoints: (builder) => ({
-    // --- ACCOUNT ---
-    register: builder.mutation({
-      query: (user) => ({
-        url: "/Account/register",
-        method: "POST",
-        body: user,
-      }),
+    // ==========================================
+    // 1. ACCOUNT (АВТОРИЗАЦИЯ И СБРОС ПАРОЛЕЙ)
+    // ==========================================
+    register: builder.mutation({ 
+      query: (user) => ({ url: "/Account/register", method: "POST", body: user }) 
     }),
-    login: builder.mutation({
-      query: (user) => ({
-        url: "/Account/login",
-        method: "POST",
-        body: user,
-      }),
+    login: builder.mutation({ 
+      query: (user) => ({ url: "/Account/login", method: "POST", body: user }) 
     }),
-    forgotPassword: builder.mutation({
-      query: () => ({
-        url: "/Account/ForgotPassword",
-        method: "DELETE",
-      }),
+    forgotPassword: builder.mutation({ 
+      query: () => ({ url: "/Account/ForgotPassword", method: "DELETE" }) 
     }),
-    resetPassword: builder.mutation({
-      query: () => ({
-        url: "/Account/ResetPassword",
-        method: "DELETE",
-      }),
+    resetPassword: builder.mutation({ 
+      query: () => ({ url: "/Account/ResetPassword", method: "DELETE" }) 
     }),
-    changePassword: builder.mutation({
-      query: (data) => ({
-        url: "/Account/ChangePassword",
-        method: "PUT",
-        body: data,
-      }),
+    changePassword: builder.mutation({ 
+      query: (data) => ({ url: "/Account/ChangePassword", method: "PUT", body: data }) 
     }),
 
-    // --- USER PROFILE ---
+    // ==========================================
+    // 2. USER PROFILE (ПРОФИЛИ ПОЛЬЗОВАТЕЛЕЙ)
+    // ==========================================
     getUserProfileById: builder.query({
       query: (id) => `/UserProfile/get-user-profile-by-id?id=${id}`,
+      providesTags: (result, error, id) => [{ type: "UserProfile", id }],
     }),
     getIsFollowUserProfileById: builder.query({
       query: (id) => `/UserProfile/get-is-follow-user-profile-by-id?id=${id}`,
+      providesTags: (result, error, id) => [{ type: "FollowStatus", id }],
     }),
     getMyProfile: builder.query({
       query: () => "/UserProfile/get-my-profile",
       providesTags: ["MyProfile"],
     }),
     updateUserProfile: builder.mutation({
-      query: (profile) => ({
-        url: "/UserProfile/update-user-profile",
-        method: "PUT",
-        body: profile,
-      }),
+      query: (profile) => ({ url: "/UserProfile/update-user-profile", method: "PUT", body: profile }),
       invalidatesTags: ["MyProfile"],
     }),
     getPostFavorites: builder.query({
       query: () => "/UserProfile/get-post-favorites",
     }),
     updateUserImageProfile: builder.mutation({
-      query: (image) => ({
-        url: "/UserProfile/update-user-image-profile",
-        method: "PUT",
-        body: image,
-      }),
+      query: (image) => ({ url: "/UserProfile/update-user-image-profile", method: "PUT", body: image }),
       invalidatesTags: ["MyProfile"],
     }),
     deleteUserImageProfile: builder.mutation({
-      query: () => ({
-        url: "/UserProfile/delete-user-image-profile",
-        method: "DELETE",
-      }),
+      query: () => ({ url: "/UserProfile/delete-user-image-profile", method: "DELETE" }),
+      invalidatesTags: ["MyProfile"],
     }),
 
-    // --- FOLLOWING RELATION SHIP ---
-    getSubscribers: builder.query({
-      query: () => "/FollowingRelationShip/get-subscribers",
-    }),
-    getSubscriptions: builder.query({
-      query: () => "/FollowingRelationShip/get-subscriptions",
-    }),
+    // ==========================================
+    // 3. FOLLOWING RELATION SHIP (ПОДПИСКИ)
+    // ==========================================
+    getSubscribers: builder.query({ query: () => "/FollowingRelationShip/get-subscribers" }),
+    getSubscriptions: builder.query({ query: () => "/FollowingRelationShip/get-subscriptions" }),
+    
     addFollowingRelationShip: builder.mutation({
-      query: (data) => ({
-        url: "/FollowingRelationShip/add-following-relation-ship",
+      query: (userId) => ({
+        url: `/FollowingRelationShip/add-following-relation-ship?followingUserId=${userId}`,
         method: "POST",
-        body: data,
       }),
+      // Перезапрашиваем данные профиля и статус кнопки, чтобы счетчик сразу изменился
+      invalidatesTags: (result, error, userId) => [
+        "MyProfile",
+        { type: "UserProfile", id: userId },
+        { type: "FollowStatus", id: userId }
+      ],
     }),
     deleteFollowingRelationShip: builder.mutation({
-      query: () => ({
-        url: "/FollowingRelationShip/delete-following-relation-ship",
+      query: (userId) => ({
+        url: `/FollowingRelationShip/delete-following-relation-ship?followingUserId=${userId}`,
         method: "DELETE",
       }),
+      invalidatesTags: (result, error, userId) => [
+        "MyProfile",
+        { type: "UserProfile", id: userId },
+        { type: "FollowStatus", id: userId }
+      ],
+    }),
 
+    // ==========================================
+    // 4. POST (ПУБЛИКАЦИИ И ЛАЙКИ)
+    // ==========================================
+    getPosts: builder.query({
+      query: () => "/Post/get-posts",
+      providesTags: ["AllPosts"],
+    }),
+    getMyPosts: builder.query({ 
+      query: () => "/Post/get-my-posts" 
+    }),
+    getPostById: builder.query({
+      query: (postId) => `/Post/get-post-by-id?postId=${postId}`,
+      providesTags: (result, error, postId) => [{ type: "AllPosts", id: postId }],
     }),
     addPost: builder.mutation<any, FormData>({
       query: (body) => ({
-        url: "/Post/add-post", // Проверь точный путь к добавлению постов/reels в Swagger
+        url: "/Post/add-post",
         method: "POST",
-        body,
+        body, // Сюда передаем FormData с Title, Content и Images[]
       }),
-      invalidatesTags: ["MyProfile"],
-    }), 
+      invalidatesTags: ["AllPosts"],
+    }),
+    deletePost: builder.mutation({
+      query: (postId) => ({
+        url: `/Post/delete-post?postId=${postId}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["AllPosts"],
+    }),
+    likePost: builder.mutation({
+      query: (postId) => ({
+        url: `/Post/like-post?postId=${postId}`,
+        method: "POST",
+      }),
+      invalidatesTags: ["AllPosts"],
+    }),
+    addComment: builder.mutation({
+      query: ({ postId, commentText }) => ({
+        url: `/Post/add-comment`,
+        method: "POST",
+        body: { comment: commentText, postId: postId },
+      }),
+      invalidatesTags: ["AllPosts"],
+    }),
+    deleteComment: builder.mutation({
+      query: (commentId) => ({
+        url: `/Post/delete-comment?commentId=${commentId}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["AllPosts"],
+    }),
+    addPostFavorite: builder.mutation({
+      query: (postId) => ({
+        url: `/Post/add-post-favorite?postId=${postId}`,
+        method: "POST",
+      }),
+    }),
   }),
 });
 
+// Экспортируем абсолютно все хуки, которые могут понадобиться в приложении
 export const {
   useRegisterMutation,
   useLoginMutation,
@@ -137,5 +174,13 @@ export const {
   useGetSubscriptionsQuery,
   useAddFollowingRelationShipMutation,
   useDeleteFollowingRelationShipMutation,
+  useGetMyPostsQuery,
+  useGetPostsQuery,
+  useGetPostByIdQuery,
   useAddPostMutation,
-} = profileApi;
+  useDeletePostMutation,
+  useLikePostMutation,
+  useAddCommentMutation,
+  useDeleteCommentMutation,
+  useAddPostFavoriteMutation,
+} = profileApi; 
