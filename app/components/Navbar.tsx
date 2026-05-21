@@ -39,7 +39,6 @@ export default function Sidebar() {
         p-3
         transition-all
         duration-300
-
         w-[80px]
         hover:w-[250px]
       "
