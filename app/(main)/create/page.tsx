@@ -1,289 +1,659 @@
 "use client"
 
-import React, { useState, useRef } from "react"
+import React, { useState, useRef, useCallback, useEffect } from "react"
 import {
-  VideoCameraIcon,
-  DocumentPlusIcon,
-  ArrowUpTrayIcon,
-  XMarkIcon,
+  ArrowLeftIcon,
+  MapPinIcon,
+  UserIcon,
+  ChevronRightIcon,
   SparklesIcon,
+  Cog6ToothIcon,
+  FaceSmileIcon,
 } from "@heroicons/react/24/outline"
 import { useAddPostMutation } from "@/app/services/Reels"
 
-export default function CreateReelPlaceholder() {
-  const [title, setTitle] = useState("")
-  const [content, setContent] = useState("")
-  const [videoFile, setVideoFile] = useState<File | null>(null)
-  const [videoPreview, setVideoPreview] = useState<string | null>(null)
-  const [dragActive, setDragActive] = useState(false)
-  const [showLogModal, setShowLogModal] = useState(false)
-  const [successLog, setSuccessLog] = useState<string>("")
+// ─── SVG Aspect Ratio Icons ──────────────────────────────────────────────────
+const OriginalIcon = () => (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75v4.5m0-4.5h-4.5m4.5 0L15 9M20.25 20.25v-4.5m0 4.5h-4.5m4.5 0L15 15" />
+  </svg>
+)
 
-  // Real RTK Mutation
-  const [addPost, { isLoading }] = useAddPostMutation()
+const SquareIcon = () => (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+    <rect x={4} y={4} width={16} height={16} rx={2.5} />
+  </svg>
+)
 
-  const fileInputRef = useRef<HTMLInputElement | null>(null)
+const PortraitIcon = () => (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+    <rect x={5} y={3} width={14} height={18} rx={2.5} />
+  </svg>
+)
 
-  // Drag and drop handlers
-  const handleDrag = (e: React.DragEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    if (e.type === "dragenter" || e.type === "dragover") {
-      setDragActive(true)
-    } else if (e.type === "dragleave") {
-      setDragActive(false)
+const LandscapeIcon = () => (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+    <rect x={3} y={5} width={18} height={14} rx={2.5} />
+  </svg>
+)
+
+// ─── CSS Instagram Filters ───────────────────────────────────────────────────
+const FILTERS = [
+  { name: "Original",  css: "none" },
+  { name: "Clarendon", css: "contrast(1.2) saturate(1.35)" },
+  { name: "Lark",      css: "brightness(1.1) contrast(0.9) saturate(1.4)" },
+  { name: "Juno",      css: "saturate(1.4) contrast(1.1) sepia(0.1)" },
+  { name: "Ludwig",    css: "saturate(0.75) brightness(1.05)" },
+  { name: "Aden",      css: "sepia(0.2) brightness(1.15) saturate(1.4) hue-rotate(-10deg)" },
+  { name: "Crema",     css: "sepia(0.4) brightness(1.1) saturate(0.9)" },
+  { name: "Gingham",   css: "brightness(1.05) hue-rotate(-10deg) sepia(0.05)" },
+  { name: "Moon",      css: "grayscale(1) brightness(1.1) contrast(1.1)" },
+  { name: "Reyes",     css: "sepia(0.35) contrast(0.85) brightness(1.1) saturate(0.75)" },
+]
+
+// ─── Ratio Selector Mapping ──────────────────────────────────────────────────
+const RATIOS = [
+  { label: "Original", value: "original", Icon: OriginalIcon },
+  { label: "1:1 Square", value: "1/1", Icon: SquareIcon },
+  { label: "4:5 Portrait", value: "4/5", Icon: PortraitIcon },
+  { label: "16:9 Landscape", value: "16/9", Icon: LandscapeIcon },
+]
+
+type Step = "upload" | "crop" | "filter" | "caption"
+
+// ─── Process Image: Crop & Apply Filter via Canvas ───────────────────────────
+const processProcessedImage = (
+  imageFile: File,
+  filterCss: string,
+  ratioStr: string
+): Promise<File> => {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    img.src = URL.createObjectURL(imageFile)
+
+    img.onload = () => {
+      URL.revokeObjectURL(img.src)
+
+      const canvas = document.createElement("canvas")
+      const ctx = canvas.getContext("2d")
+      if (!ctx) {
+        resolve(imageFile)
+        return
+      }
+
+      const W = img.naturalWidth
+      const H = img.naturalHeight
+
+      let targetWidth = W
+      let targetHeight = H
+      let sx = 0
+      let sy = 0
+      let sWidth = W
+      let sHeight = H
+
+      if (ratioStr !== "original") {
+        let r = 1.0
+        if (ratioStr === "1/1") r = 1.0
+        else if (ratioStr === "4/5") r = 0.8
+        else if (ratioStr === "16/9") r = 16 / 9
+
+        const currentRatio = W / H
+
+        if (currentRatio > r) {
+          sHeight = H
+          sWidth = H * r
+          sx = (W - sWidth) / 2
+          sy = 0
+        } else {
+          sWidth = W
+          sHeight = W / r
+          sx = 0
+          sy = (H - sHeight) / 2
+        }
+
+        targetWidth = sWidth
+        targetHeight = sHeight
+      }
+
+      canvas.width = targetWidth
+      canvas.height = targetHeight
+
+      if (filterCss !== "none") {
+        ctx.filter = filterCss
+      }
+
+      ctx.drawImage(img, sx, sy, sWidth, sHeight, 0, 0, targetWidth, targetHeight)
+
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) {
+            resolve(imageFile)
+            return
+          }
+          const file = new File([blob], imageFile.name, {
+            type: imageFile.type || "image/jpeg",
+            lastModified: Date.now(),
+          })
+          resolve(file)
+        },
+        imageFile.type || "image/jpeg",
+        0.95
+      )
     }
+
+    img.onerror = (err) => {
+      reject(err)
+    }
+  })
+}
+
+export default function CreatePostPage() {
+  const [step, setStep] = useState<Step>("upload")
+  const [imageFile, setImageFile] = useState<File | null>(null)
+  const [imageURL, setImageURL] = useState<string | null>(null)
+  const [dragActive, setDragActive] = useState(false)
+  const [ratio, setRatio] = useState("original")
+  const [shaking, setShaking] = useState(false)
+  const [selectedFilter, setSelectedFilter] = useState("none")
+  
+  // Caption & details
+  const [caption, setCaption] = useState("")
+  const [location, setLocation] = useState("")
+  const [showLocationInput, setShowLocationInput] = useState(false)
+  
+  const [successModal, setSuccessModal] = useState(false)
+  const [isPublishing, setIsPublishing] = useState(false)
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false)
+
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [addPost] = useAddPostMutation()
+
+  // Clean up object URL when component unmounts
+  useEffect(() => {
+    return () => {
+      if (imageURL) URL.revokeObjectURL(imageURL)
+    }
+  }, [imageURL])
+
+  // Shake animation when aspect ratio changes
+  const triggerShake = () => {
+    setShaking(true)
+    setTimeout(() => setShaking(false), 500)
   }
 
-  const processFile = (file: File) => {
-    if (!file.type.startsWith("video/")) {
-      alert("Please upload a valid video file (e.g. mp4, webm).")
+  const handleRatioChange = (val: string) => {
+    setRatio(val)
+    triggerShake()
+  }
+
+  // Handle selected image file
+  const processFile = useCallback((file: File) => {
+    if (!file.type.startsWith("image/")) {
+      alert("Please select a valid image file.")
       return
     }
-    setVideoFile(file)
-    const url = URL.createObjectURL(file)
-    setVideoPreview(url)
-  }
+    if (imageURL) URL.revokeObjectURL(imageURL)
+    setImageFile(file)
+    setImageURL(URL.createObjectURL(file))
+    setStep("crop")
+  }, [imageURL])
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault()
     e.stopPropagation()
     setDragActive(false)
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+    if (e.dataTransfer.files?.[0]) {
       processFile(e.dataTransfer.files[0])
     }
   }
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      processFile(e.target.files[0])
-    }
-  }
-
-  const triggerFileInput = () => {
-    fileInputRef.current?.click()
-  }
-
-  const clearSelectedVideo = () => {
-    if (videoPreview) {
-      URL.revokeObjectURL(videoPreview)
-    }
-    setVideoFile(null)
-    setVideoPreview(null)
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleDrag = (e: React.DragEvent) => {
     e.preventDefault()
-    if (!videoFile) return
+    e.stopPropagation()
+    setDragActive(e.type === "dragenter" || e.type === "dragover")
+  }
 
+  // Publish Post to Feed
+  const handlePublish = async () => {
+    if (!imageFile) return
+    setIsPublishing(true)
     try {
+      let finalFile = imageFile
+      try {
+        finalFile = await processProcessedImage(imageFile, selectedFilter, ratio)
+      } catch (procErr) {
+        console.warn("Failed to apply filters, sharing original image:", procErr)
+      }
+
+      const fullCaption = location ? `${caption}\n\n📍 ${location}` : caption
       await addPost({
-        title,
-        content,
-        images: [videoFile]
+        title: fullCaption,
+        content: fullCaption,
+        images: [finalFile],
       }).unwrap()
-
-      // Log success payload
-      const logDetails = {
-        Status: "Published successfully! 🚀",
-        Title: title,
-        Content: content,
-        VideoFileName: videoFile.name,
-        VideoSize: `${(videoFile.size / (1024 * 1024)).toFixed(2)} MB`,
-        ServerResponse: "200 Success - Post Added to Reels feed"
-      }
-      
-      setSuccessLog(JSON.stringify(logDetails, null, 2))
-      setShowLogModal(true)
-
-      // Reset form
-      setTitle("")
-      setContent("")
-      clearSelectedVideo()
+      setSuccessModal(true)
+      // reset
+      setStep("upload")
+      setImageFile(null)
+      setImageURL(null)
+      setCaption("")
+      setLocation("")
+      setSelectedFilter("none")
+      setRatio("original")
     } catch (err: any) {
-      console.error("Failed to publish Reel:", err)
-      let errorMessage = "Unknown error occurred"
-      
-      if (err?.data?.errors) {
-        errorMessage = typeof err.data.errors === "object"
-          ? JSON.stringify(err.data.errors, null, 2)
-          : String(err.data.errors)
-      } else if (err?.data?.message) {
-        errorMessage = String(err.data.message)
-      } else if (err?.message) {
-        errorMessage = String(err.message)
-      } else if (err?.data) {
-        errorMessage = typeof err.data === "object"
-          ? JSON.stringify(err.data, null, 2)
-          : String(err.data)
-      }
-      
-      alert("Failed to publish Reel:\n" + errorMessage)
+      const errorMsg = err?.data?.errors
+        ? JSON.stringify(err.data.errors, null, 2)
+        : err?.data?.message ?? err?.message ?? "An unexpected error occurred"
+      alert("Failed to share post:\n" + errorMsg)
+    } finally {
+      setIsPublishing(false)
     }
   }
+
+  // Navigate back/next
+  const goBack = () => {
+    if (step === "crop") {
+      setStep("upload")
+      setImageFile(null)
+      setImageURL(null)
+    }
+    if (step === "filter") setStep("crop")
+    if (step === "caption") setStep("filter")
+  }
+
+  const goNext = () => {
+    if (step === "crop") setStep("filter")
+    if (step === "filter") setStep("caption")
+  }
+
+  // Formatting steps
+  const stepTitle: Record<Step, string> = {
+    upload: "Create new post",
+    crop: "Crop",
+    filter: "Edit",
+    caption: "Create new post",
+  }
+
+  const filterStyle = selectedFilter === "none" ? {} : { filter: selectedFilter }
+
+  const emojis = ["😂", "😍", "😭", "👍", "❤️", "🔥", "👏", "🎉", "🙌", "😎", "✨", "💯"]
 
   return (
-    <div className="h-full w-full bg-black text-white p-6 md:p-10 overflow-y-auto relative">
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="border-b border-white/10 pb-6 mb-8">
-          <h1 className="text-3xl font-black tracking-tight text-white flex items-center gap-2">
-            <VideoCameraIcon className="h-8 w-8 text-pink-500" />
-            Create Reel
-          </h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Publish a new vertical reel directly to the platform feed. Fully connected to Swagger multipart endpoint.
-          </p>
+    <div className="h-full w-full flex items-center justify-center bg-black overflow-y-auto py-10 px-4">
+      {/* Premium Keyframe Animations */}
+      <style>{`
+        @keyframes shake {
+          0%, 100% { transform: scale(1) rotate(0deg); }
+          20% { transform: scale(1.02) rotate(-1deg); }
+          40% { transform: scale(1.02) rotate(1deg); }
+          60% { transform: scale(1.01) rotate(-0.5deg); }
+          80% { transform: scale(1.01) rotate(0.5deg); }
+        }
+        .shake-effect { animation: shake 0.45s cubic-bezier(.36,.07,.19,.97) both; }
+
+        @keyframes modalEnter {
+          from { opacity: 0; transform: scale(0.96); }
+          to { opacity: 1; transform: scale(1); }
+        }
+        .modal-enter { animation: modalEnter 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+      `}</style>
+
+      {/* ── Instagram-Style Modal Container ── */}
+      <div className="relative bg-[#262626] rounded-xl overflow-hidden shadow-2xl border border-white/10 w-full max-w-[840px] flex flex-col modal-enter"
+           style={{ minHeight: 540 }}>
+
+        {/* ── Modal Header ── */}
+        <div className="h-11 flex items-center justify-between px-4 border-b border-[#363636] bg-[#262626] select-none flex-shrink-0">
+          {step !== "upload" ? (
+            <button
+              onClick={goBack}
+              className="text-white hover:text-gray-300 transition duration-150"
+            >
+              <ArrowLeftIcon className="w-5 h-5 stroke-[2.5]" />
+            </button>
+          ) : (
+            <div className="w-5" />
+          )}
+
+          <span className="text-white font-semibold text-sm tracking-wide">
+            {stepTitle[step]}
+          </span>
+
+          {step !== "upload" && step !== "caption" ? (
+            <button
+              onClick={goNext}
+              className="text-[#0095f6] hover:text-[#1aa3ff] font-bold text-sm transition duration-150"
+            >
+              Next
+            </button>
+          ) : step === "caption" ? (
+            <button
+              onClick={handlePublish}
+              disabled={isPublishing}
+              className="text-[#0095f6] hover:text-[#1aa3ff] font-bold text-sm transition duration-150 disabled:opacity-40"
+            >
+              {isPublishing ? "Sharing..." : "Share"}
+            </button>
+          ) : (
+            <div className="w-5" />
+          )}
         </div>
 
-        {/* Main interactive creation form grid */}
-        <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-5 gap-8">
-          
-          {/* Left panel - Upload (span 3) */}
-          <div className="lg:col-span-3 flex flex-col gap-4">
-            <label className="text-sm font-bold text-gray-400">Video Upload</label>
-            
-            {videoPreview ? (
-              <div className="relative aspect-[9/16] max-h-[500px] w-full rounded-3xl overflow-hidden bg-neutral-900 border border-white/10 shadow-2xl flex items-center justify-center">
-                <video
-                  src={videoPreview}
-                  controls
-                  className="h-full w-full object-contain"
-                />
-                <button
-                  type="button"
-                  disabled={isLoading}
-                  onClick={clearSelectedVideo}
-                  className="absolute top-4 right-4 flex h-9 w-9 items-center justify-center rounded-full bg-black/60 border border-white/10 hover:bg-black/85 transition text-white disabled:opacity-50"
-                >
-                  <XMarkIcon className="h-5 w-5" />
-                </button>
-              </div>
-            ) : (
+        {/* ── Modal Body content ── */}
+        <div className="flex-1 flex flex-col md:flex-row bg-black overflow-hidden relative">
+
+          {/* ══════════════════════ STEP: UPLOAD ══════════════════════ */}
+          {step === "upload" && (
+            <div className="flex-1 flex flex-col items-center justify-center py-20 px-8 bg-[#181818]">
               <div
                 onDragEnter={handleDrag}
                 onDragOver={handleDrag}
                 onDragLeave={handleDrag}
                 onDrop={handleDrop}
-                onClick={triggerFileInput}
-                className={`relative aspect-[9/16] max-h-[500px] w-full rounded-3xl border-2 border-dashed flex flex-col items-center justify-center p-6 text-center cursor-pointer transition-all duration-300 ${
+                onClick={() => fileInputRef.current?.click()}
+                className={`flex flex-col items-center gap-6 cursor-pointer w-full max-w-md rounded-2xl border-2 border-dashed p-12 transition-all duration-300 ${
                   dragActive
-                    ? "border-pink-500 bg-pink-500/5 scale-102"
-                    : "border-white/10 bg-white/2 hover:border-white/20 hover:bg-white/4"
+                    ? "border-[#0095f6] bg-[#0095f6]/5 scale-102"
+                    : "border-white/15 hover:border-white/30 hover:bg-white/2"
                 }`}
               >
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept="video/*"
-                  onChange={handleFileChange}
+                  accept="image/*"
+                  onChange={(e) => e.target.files?.[0] && processFile(e.target.files[0])}
                   className="hidden"
                 />
 
-                <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-white/5 border border-white/5 text-gray-400 group-hover:scale-105 transition-transform">
-                  <ArrowUpTrayIcon className="h-7 w-7 text-pink-500 animate-pulse" />
+                {/* Highly Authentic Instagram Icon Asset */}
+                <div className="text-white">
+                  <svg aria-label="Icon to represent media such as images or videos" className="mx-auto" color="currentColor" fill="currentColor" height="77" role="img" viewBox="0 0 97.6 77.3" width="96">
+                    <path d="M16.3 24h.3c.1-.2.2-.4.4-.6l2-2.9C20 19 21.8 18 23.5 18h14.7c1.7 0 3.5 1 4.3 2.6l2 2.9c.1.2.3.4.4.6h25.9c3.9 0 7.1 3.2 7.1 7.1v31.8c0 3.9-3.2 7.1-7.1 7.1H16.3c-3.9 0-7.1-3.2-7.1-7.1V31.1c0-3.9 3.2-7.1 7.1-7.1zm54.3 23c-4.2 0-7.7-3.4-7.7-7.7s3.4-7.7 7.7-7.7 7.7 3.4 7.7 7.7-3.5 7.7-7.7 7.7zM16.3 20c-6.1 0-11.1 5-11.1 11.1v31.8c0 6.1 5 11.1 11.1 11.1h54.3c6.1 0 11.1-5 11.1-11.1V31.1c0-6.1-5-11.1-11.1-11.1H60l-2.4-3.6C56 13.9 53 12 49.5 12H23.5c-3.5 0-6.5 1.9-8.1 4.4L13 20H16.3z" fill="currentColor"></path>
+                  </svg>
                 </div>
 
-                <h3 className="text-lg font-bold text-white mb-1">Drag video here</h3>
-                <p className="text-sm text-gray-500 max-w-xs mb-4">
-                  MP4, WebM or OGG files up to 50MB. (Vertical 9:16 aspect ratio recommended)
-                </p>
-                <span className="rounded-xl bg-white text-black px-4 py-2 text-xs font-black tracking-wide hover:bg-gray-200 transition">
-                  Select from Computer
-                </span>
-              </div>
-            )}
-          </div>
+                <div className="text-center space-y-1">
+                  <p className="text-white text-lg font-light">Drag photos here</p>
+                  <p className="text-[11px] text-gray-500 font-semibold tracking-wide uppercase">JPG, PNG, WEBP formats supported</p>
+                </div>
 
-          {/* Right panel - Details Form (span 2) */}
-          <div className="lg:col-span-2 flex flex-col gap-6">
-            <div className="flex flex-col gap-2">
-              <label className="text-sm font-bold text-gray-400" htmlFor="title-input">
-                Title
-              </label>
-              <input
-                id="title-input"
-                type="text"
-                disabled={isLoading}
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="Write a catchy title..."
-                className="w-full rounded-xl bg-white/5 border border-white/10 p-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-pink-500/50 transition disabled:opacity-50"
-              />
-            </div>
-
-            <div className="flex flex-col gap-2">
-              <label className="text-sm font-bold text-gray-400" htmlFor="caption-input">
-                Caption / Description
-              </label>
-              <textarea
-                id="caption-input"
-                rows={5}
-                disabled={isLoading}
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-                placeholder="Add hashtags, descriptions, links..."
-                className="w-full rounded-xl bg-white/5 border border-white/10 p-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-pink-500/50 transition resize-none disabled:opacity-50"
-              />
-            </div>
-
-            <div className="rounded-2xl border border-yellow-500/10 bg-yellow-500/5 p-4 text-xs leading-relaxed text-yellow-400/90 flex gap-3">
-              <SparklesIcon className="h-5 w-5 text-yellow-400 flex-shrink-0" />
-              <div>
-                <p className="font-bold mb-0.5">Swagger API Online</p>
-                Successfully connected to `POST /Post/add-post`. Submitting this form runs a multi-part file upload straight to the production Reels feed!
+                <button
+                  type="button"
+                  className="bg-[#0095f6] hover:bg-[#1aa3ff] text-white text-xs font-bold px-4 py-2 rounded-lg transition duration-150 active:scale-98"
+                >
+                  Select from computer
+                </button>
               </div>
             </div>
+          )}
 
-            <button
-              type="submit"
-              disabled={!videoFile || isLoading}
-              className="w-full flex items-center justify-center gap-2 rounded-2xl bg-white hover:bg-gray-200 disabled:opacity-30 text-black py-3.5 text-sm font-extrabold transition active:scale-98 disabled:pointer-events-none cursor-pointer shadow-lg shadow-white/5"
-            >
-              {isLoading ? (
-                <>
-                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-black/20 border-t-black"></div>
-                  Publishing Reel...
-                </>
-              ) : (
-                <>
-                  <DocumentPlusIcon className="h-5 w-5" />
-                  Publish Reel
-                </>
-              )}
-            </button>
-          </div>
-        </form>
+          {/* ══════════════════════ STEP: CROP ══════════════════════ */}
+          {step === "crop" && imageURL && (
+            <>
+              {/* Left Side: Large interactive preview */}
+              <div className="flex-1 bg-black flex items-center justify-center p-6 select-none relative" style={{ minHeight: 460 }}>
+                <div
+                  className={`relative overflow-hidden transition-all duration-300 ${
+                    shaking ? "shake-effect" : ""
+                  }`}
+                  style={{
+                    aspectRatio: ratio === "original" ? "auto" : ratio,
+                    maxHeight: "420px",
+                    maxWidth: "100%",
+                    borderRadius: "4px",
+                    boxShadow: "0 10px 25px rgba(0,0,0,0.5)",
+                  }}
+                >
+                  <img
+                    src={imageURL}
+                    alt="crop preview"
+                    className="w-full h-full object-cover block select-none"
+                    draggable={false}
+                    style={filterStyle}
+                  />
+                </div>
+              </div>
+
+              {/* Right Side: Aspect Ratio Selector Panel */}
+              <div className="w-full md:w-[280px] bg-[#262626] border-t md:border-t-0 md:border-l border-[#363636] flex flex-col p-4 flex-shrink-0">
+                <span className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-3.5">Select Aspect Ratio</span>
+                <div className="flex flex-col gap-2">
+                  {RATIOS.map(({ label, value, Icon }) => (
+                    <button
+                      key={value}
+                      onClick={() => handleRatioChange(value)}
+                      className={`flex items-center gap-3.5 px-4 py-3.5 rounded-xl text-left text-xs font-bold transition-all duration-150 ${
+                        ratio === value
+                          ? "bg-white/10 text-white shadow-md border border-white/5"
+                          : "text-gray-400 hover:text-white hover:bg-white/5 border border-transparent"
+                      }`}
+                    >
+                      <div className={ratio === value ? "text-[#0095f6]" : "text-gray-400"}>
+                        <Icon />
+                      </div>
+                      <span className="tracking-wide">{label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* ══════════════════════ STEP: FILTER ══════════════════════ */}
+          {step === "filter" && imageURL && (
+            <>
+              {/* Left Side: Large interactive preview */}
+              <div className="flex-1 bg-black flex items-center justify-center p-6 select-none" style={{ minHeight: 460 }}>
+                <div
+                  style={{
+                    aspectRatio: ratio === "original" ? "auto" : ratio,
+                    maxHeight: "420px",
+                    maxWidth: "100%",
+                    borderRadius: "4px",
+                    overflow: "hidden",
+                    boxShadow: "0 10px 25px rgba(0,0,0,0.5)",
+                  }}
+                >
+                  <img
+                    src={imageURL}
+                    alt="filter preview"
+                    className="w-full h-full object-cover block select-none"
+                    draggable={false}
+                    style={filterStyle}
+                  />
+                </div>
+              </div>
+
+              {/* Right Side: Premium Filter Grid Scroll Container */}
+              <div className="w-full md:w-[280px] bg-[#262626] border-t md:border-t-0 md:border-l border-[#363636] flex flex-col p-4 flex-shrink-0 overflow-y-auto" style={{ maxHeight: 480 }}>
+                <span className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-3">Filters</span>
+                <div className="grid grid-cols-2 gap-3">
+                  {FILTERS.map((f) => (
+                    <button
+                      key={f.name}
+                      onClick={() => setSelectedFilter(f.css)}
+                      className={`flex flex-col items-center gap-1.5 rounded-xl p-2 transition-all duration-150 ${
+                        selectedFilter === f.css
+                          ? "bg-white/10 ring-2 ring-[#0095f6]"
+                          : "hover:bg-white/5 border border-transparent"
+                      }`}
+                    >
+                      {/* Stylized small preview thumbnail */}
+                      <div className="w-full aspect-square rounded-lg overflow-hidden border border-white/5">
+                        <img
+                          src={imageURL}
+                          alt={f.name}
+                          className="w-full h-full object-cover"
+                          style={{ filter: f.css === "none" ? "none" : f.css }}
+                        />
+                      </div>
+                      <span className={`text-[10px] font-semibold tracking-wide ${
+                        selectedFilter === f.css ? "text-[#0095f6]" : "text-gray-400"
+                      }`}>
+                        {f.name}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* ══════════════════════ STEP: CAPTION ══════════════════════ */}
+          {step === "caption" && imageURL && (
+            <>
+              {/* Left Side: Large interactive preview */}
+              <div className="flex-1 bg-black flex items-center justify-center p-6 select-none" style={{ minHeight: 460 }}>
+                <div
+                  style={{
+                    aspectRatio: ratio === "original" ? "auto" : ratio,
+                    maxHeight: "420px",
+                    maxWidth: "100%",
+                    borderRadius: "4px",
+                    overflow: "hidden",
+                    boxShadow: "0 10px 25px rgba(0,0,0,0.5)",
+                  }}
+                >
+                  <img
+                    src={imageURL}
+                    alt="final preview"
+                    className="w-full h-full object-cover block select-none"
+                    draggable={false}
+                    style={filterStyle}
+                  />
+                </div>
+              </div>
+
+              {/* Right Side: Instagram Details & Sharing sidebar */}
+              <div className="w-full md:w-[320px] bg-[#262626] border-t md:border-t-0 md:border-l border-[#363636] flex flex-col flex-shrink-0 select-none">
+                
+                {/* User Info Header */}
+                <div className="flex items-center gap-3 p-4">
+                  <div className="h-7 w-7 rounded-full bg-gradient-to-tr from-yellow-500 via-pink-600 to-purple-600 p-[1.5px]">
+                    <div className="h-full w-full rounded-full bg-[#262626] flex items-center justify-center text-white text-[11px] font-black">
+                      U
+                    </div>
+                  </div>
+                  <span className="text-white text-xs font-bold">user</span>
+                </div>
+
+                {/* Caption Textarea Container */}
+                <div className="px-4 flex flex-col relative">
+                  <textarea
+                    value={caption}
+                    onChange={(e) => setCaption(e.target.value)}
+                    placeholder="Write a caption..."
+                    maxLength={2200}
+                    rows={6}
+                    className="w-full bg-transparent resize-none text-white text-sm placeholder-gray-500 focus:outline-none leading-relaxed"
+                  />
+                  
+                  {/* Emoji Quick Picker Bar */}
+                  <div className="flex justify-between items-center py-2.5 border-b border-[#363636]">
+                    <button
+                      type="button"
+                      onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                      className="text-gray-400 hover:text-white transition duration-150"
+                    >
+                      <FaceSmileIcon className="w-5.5 h-5.5" />
+                    </button>
+                    <span className="text-[10px] text-gray-500 font-bold">
+                      {caption.length.toLocaleString()}/2,200
+                    </span>
+                  </div>
+
+                  {/* Quick Emojis Grid */}
+                  {showEmojiPicker && (
+                    <div className="flex flex-wrap gap-2.5 py-3 border-b border-[#363636] animate-fade-in">
+                      {emojis.map((emoji) => (
+                        <button
+                          key={emoji}
+                          type="button"
+                          onClick={() => {
+                            setCaption((prev) => prev + emoji)
+                            setShowEmojiPicker(false)
+                          }}
+                          className="text-lg hover:scale-120 transition active:scale-95 duration-100"
+                        >
+                          {emoji}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Extra Options Accordion/Drawer List */}
+                <div className="flex-1 flex flex-col divide-y divide-[#363636]">
+                  {/* Add Location Row */}
+                  <div className="flex flex-col">
+                    <div
+                      onClick={() => setShowLocationInput(!showLocationInput)}
+                      className="flex items-center justify-between px-4 py-3.5 text-white hover:bg-white/2 cursor-pointer transition duration-150"
+                    >
+                      <div className="flex items-center gap-3">
+                        <MapPinIcon className="h-4.5 w-4.5 text-gray-300" />
+                        <span className="text-xs font-semibold">
+                          {location ? `Location: ${location}` : "Add location"}
+                        </span>
+                      </div>
+                      <ChevronRightIcon className={`h-3.5 w-3.5 text-gray-400 transition-transform ${showLocationInput ? "rotate-90" : ""}`} />
+                    </div>
+
+                    {showLocationInput && (
+                      <div className="px-4 pb-3 animate-fade-in">
+                        <input
+                          type="text"
+                          value={location}
+                          onChange={(e) => setLocation(e.target.value)}
+                          placeholder="Search or add location..."
+                          className="w-full bg-[#181818] border border-white/10 rounded-lg py-2 px-3 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-[#0095f6]/50 transition"
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Accessibility Option Row */}
+                  <div className="flex items-center justify-between px-4 py-3.5 text-white hover:bg-white/2 cursor-pointer transition duration-150">
+                    <div className="flex items-center gap-3">
+                      <UserIcon className="h-4.5 w-4.5 text-gray-300" />
+                      <span className="text-xs font-semibold">Accessibility</span>
+                    </div>
+                    <ChevronRightIcon className="h-3.5 w-3.5 text-gray-400" />
+                  </div>
+
+                  {/* Advanced Settings Row */}
+                  <div className="flex items-center justify-between px-4 py-3.5 text-white hover:bg-white/2 cursor-pointer transition duration-150">
+                    <div className="flex items-center gap-3">
+                      <Cog6ToothIcon className="h-4.5 w-4.5 text-gray-300" />
+                      <span className="text-xs font-semibold">Advanced settings</span>
+                    </div>
+                    <ChevronRightIcon className="h-3.5 w-3.5 text-gray-400" />
+                  </div>
+                </div>
+
+              </div>
+            </>
+          )}
+
+        </div>
       </div>
 
-      {/* Success Modal */}
-      {showLogModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fade-in">
-          <div className="relative w-full max-w-lg rounded-3xl bg-neutral-900 border border-white/10 p-6 md:p-8 shadow-2xl">
+      {/* ── Muvaffaqiyat (Success) Modal ── */}
+      {successModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm animate-fade-in p-4">
+          <div className="bg-[#262626] rounded-2xl border border-white/10 p-8 max-w-sm w-full text-center shadow-2xl">
+            <div className="h-14 w-14 rounded-full bg-emerald-500/10 text-emerald-400 flex items-center justify-center mx-auto mb-4 border border-emerald-500/20">
+              <svg className="h-7 w-7" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <h3 className="text-white text-lg font-bold mb-1.5">Post shared!</h3>
+            <p className="text-gray-400 text-xs leading-relaxed mb-6">Your post has been successfully shared to the Reels feed.</p>
             <button
-              onClick={() => setShowLogModal(false)}
-              className="absolute top-4 right-4 flex h-8 w-8 items-center justify-center rounded-full bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white transition"
+              onClick={() => setSuccessModal(false)}
+              className="w-full bg-[#0095f6] hover:bg-[#1aa3ff] text-white font-bold py-2.5 rounded-xl transition duration-150"
             >
-              <XMarkIcon className="h-5 w-5" />
-            </button>
-
-            <h3 className="text-xl font-bold text-white mb-2 flex items-center gap-2">
-              <span className="h-3.5 w-3.5 rounded-full bg-green-500 animate-ping"></span>
-              Reel Published Successfully!
-            </h3>
-            <p className="text-sm text-gray-400 mb-4">
-              Here is the confirmation details returned from the `/Post/add-post` multipart upload mutation:
-            </p>
-
-            <pre className="rounded-2xl bg-black/60 p-4 text-xs font-mono text-emerald-400 border border-white/5 overflow-x-auto">
-              {successLog}
-            </pre>
-
-            <button
-              onClick={() => setShowLogModal(false)}
-              className="mt-6 w-full rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 py-3 text-sm font-bold text-white transition"
-            >
-              Awesome, Close
+              Done
             </button>
           </div>
         </div>

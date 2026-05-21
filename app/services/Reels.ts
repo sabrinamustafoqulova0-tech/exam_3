@@ -10,6 +10,7 @@ export interface IComment {
   comment: string
 }
 
+
 export interface IReel {
   postId: number
   userId: string
@@ -84,7 +85,6 @@ export const reelsApi = createApi({
         method: "POST",
         params: { postId },
       }),
-      invalidatesTags: ["Reels"],
     }),
 
     addComment: builder.mutation<void, { comment: string; postId: number }>({
@@ -93,7 +93,6 @@ export const reelsApi = createApi({
         method: "POST",
         body,
       }),
-      invalidatesTags: ["Reels"],
     }),
 
     addFavorite: builder.mutation<void, number>({
@@ -102,16 +101,14 @@ export const reelsApi = createApi({
         method: "POST",
         body: { postId },
       }),
-      invalidatesTags: ["Reels"],
     }),
 
     addFollowing: builder.mutation<void, string>({
-      query: (followingUserId) => ({
+      query: (followingUserId) => ({  
         url: "/FollowingRelationShip/add-following-relation-ship",
         method: "POST",
         params: { followingUserId },
       }),
-      invalidatesTags: ["Reels"],
     }),
 
     deleteFollowing: builder.mutation<void, string>({
@@ -120,7 +117,6 @@ export const reelsApi = createApi({
         method: "DELETE",
         params: { followingUserId },
       }),
-      invalidatesTags: ["Reels"],
     }),
 
     addPost: builder.mutation<void, { title: string; content: string; images: File[] }>({
@@ -139,6 +135,7 @@ export const reelsApi = createApi({
     }),
   }),
 })
+
 
 export const {
   useGetReelsQuery,

@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import "../../globals.css";
 import { useRegisterMutation } from "@/app/services/authApi";
-import { useRouter } from "next/router";
+import { useRouter } from "next/navigation";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
 
@@ -14,7 +14,6 @@ const Login = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-
   const [register, { isLoading, error }] = useRegisterMutation();
 
   async function handleRegister(e: any) {

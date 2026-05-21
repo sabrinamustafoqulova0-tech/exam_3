@@ -106,6 +106,8 @@ interface CommentItem {
   userImage: string | null
   comment: string
   date: string
+  likes: number
+  isLiked: boolean
 }
 
 function ReelCard({
@@ -131,6 +133,7 @@ function ReelCard({
   const [showMoreMenu, setShowMoreMenu] = useState(false)
   const [videoError, setVideoError] = useState<string | null>(null)
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)
+  const [shareCount, setShareCount] = useState(() => Math.floor(Math.random() * 480) + 20)
   const [activeCategory, setActiveCategory] = useState<string>("🔥 Popular")
 
   // Determine media type (Video or Image) from filename
@@ -153,8 +156,20 @@ function ReelCard({
       userImage: c.userImage,
       comment: c.comment,
       date: c.dateCommented || new Date().toISOString(),
+      likes: Math.floor(Math.random() * 800),
+      isLiked: false,
     }))
   )
+
+  const toggleCommentLike = (id: number) => {
+    setComments(prev =>
+      prev.map(c =>
+        c.id === id
+          ? { ...c, isLiked: !c.isLiked, likes: c.isLiked ? c.likes - 1 : c.likes + 1 }
+          : c
+      )
+    )
+  }
   const [newCommentText, setNewCommentText] = useState("")
 
   // Autoplay/pause using IntersectionObserver (only if it is a video)
@@ -229,7 +244,7 @@ function ReelCard({
     setTimeout(() => setShowMuteIndicator(false), 800)
   }
 
-  // Real-time optimistic Like integration
+  
   const handleLike = async (e?: React.MouseEvent) => {
     if (e) e.stopPropagation()
     const nextLiked = !isLiked
@@ -315,6 +330,7 @@ function ReelCard({
     const dummyUrl = `${window.location.origin}/reels/${reel.postId}`
     navigator.clipboard.writeText(dummyUrl).then(() => {
       triggerToast("Link copied to clipboard!")
+      setShareCount(prev => prev + 1)
     })
   }
 
@@ -337,7 +353,7 @@ function ReelCard({
       date: new Date().toISOString(),
     }
 
-    setComments((prev) => [newComment, ...prev])
+    setComments((prev) => [{ ...newComment, likes: 0, isLiked: false }, ...prev])
     setNewCommentText("")
 
     try {
@@ -353,6 +369,121 @@ function ReelCard({
 
   return (
     <section className="flex h-screen w-full snap-start items-center justify-center bg-black py-2 relative select-none">
+
+      {/* ── Instagram-style RIGHT SIDE comments drawer ── */}
+      {showComments && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setShowComments(false)} />
+          <div className="fixed right-0 top-0 h-full w-[400px] z-50 bg-[#1c1c1c] border-l border-white/10 flex flex-col shadow-2xl" style={{animation:"slideInRight .25s ease"}}>
+            <style>{`@keyframes slideInRight{from{transform:translateX(100%)}to{transform:translateX(0)}}`}</style>
+
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">
+              <h3 className="text-base font-bold text-white">Comments</h3>
+              <button onClick={() => setShowComments(false)} className="text-gray-400 hover:text-white transition p-1 rounded-full hover:bg-white/10">
+                <XMarkIcon className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Comments list */}
+            <div className="flex-1 overflow-y-auto px-4 py-3 space-y-5">
+              {comments.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full text-center py-20">
+                  <ChatBubbleOvalLeftIcon className="h-12 w-12 text-gray-600 mb-3" />
+                  <p className="text-white font-bold text-lg">No comments yet.</p>
+                  <p className="text-gray-500 text-sm mt-1">Start the conversation.</p>
+                </div>
+              ) : (
+                comments.map((comment) => (
+                  <div key={comment.id} className="flex gap-3 items-start">
+                    <img
+                      src={comment.userImage ? `${API_IMAGE}${comment.userImage}` : `https://ui-avatars.com/api/?name=${comment.userName}&background=333&color=fff&size=80`}
+                      alt={comment.userName}
+                      className="h-9 w-9 rounded-full object-cover flex-shrink-0 border border-white/10"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1">
+                          <span className="font-semibold text-white text-sm">{comment.userName} </span>
+                          <span className="text-white/90 text-sm break-words">{comment.comment}</span>
+                        </div>
+                        {/* Comment Like button */}
+                        <button
+                          onClick={() => toggleCommentLike(comment.id)}
+                          className="flex-shrink-0 flex flex-col items-center gap-0.5 ml-1"
+                        >
+                          {comment.isLiked ? (
+                            <HeartIconSolid className="h-4 w-4 text-red-500" />
+                          ) : (
+                            <HeartIconOutline className="h-4 w-4 text-gray-400 hover:text-white transition" />
+                          )}
+                          {comment.likes > 0 && (
+                            <span className="text-[10px] text-gray-400">{comment.likes}</span>
+                          )}
+                        </button>
+                      </div>
+                      <div className="flex items-center gap-3 mt-1">
+                        <span className="text-[11px] text-gray-500">
+                          {new Date(comment.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                        </span>
+                        {comment.likes > 0 && (
+                          <span className="text-[11px] text-gray-500">{comment.likes} likes</span>
+                        )}
+                        <button className="text-[11px] text-gray-500 font-semibold hover:text-white transition">Reply</button>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Add Comment */}
+            <form onSubmit={handleAddComment} className="border-t border-white/10 px-4 py-3 bg-[#1c1c1c] flex items-center gap-3 relative">
+              <div className="relative flex-1">
+                <input
+                  type="text"
+                  placeholder="Add a comment..."
+                  value={newCommentText}
+                  onChange={e => setNewCommentText(e.target.value)}
+                  className="w-full bg-transparent text-white text-sm placeholder-gray-500 focus:outline-none pr-8"
+                />
+                <button type="button" onClick={e => { e.stopPropagation(); setShowEmojiPicker(!showEmojiPicker) }}
+                  className="absolute right-0 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15.182 15.182a4.5 4.5 0 0 1-6.364 0M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0ZM9.75 9.75c0 .414-.168.75-.375.75S9 10.164 9 9.75 9.168 9 9.375 9s.375.336.375.75Zm-.375 0h.008v.015h-.008V9.75Zm5.625 0c0 .414-.168.75-.375.75s-.375-.336-.375-.75.168-.75.375-.75.375.336.375.75Zm-.375 0h.008v.015h-.008V9.75Z" />
+                  </svg>
+                </button>
+              </div>
+              <button type="submit" disabled={!newCommentText.trim()}
+                className="text-[#0095f6] font-bold text-sm disabled:opacity-30 hover:text-blue-300 transition">
+                Post
+              </button>
+
+              {showEmojiPicker && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setShowEmojiPicker(false)} />
+                  <div className="absolute bottom-14 left-0 w-72 z-50 rounded-2xl bg-neutral-900 border border-white/10 p-3 shadow-2xl flex flex-col h-64">
+                    <div className="flex gap-2 border-b border-white/5 pb-2 mb-2 overflow-x-auto text-[10px] font-bold text-gray-400">
+                      {Object.keys(EMOJI_CATEGORIES).map(cat => (
+                        <button key={cat} type="button" onClick={() => setActiveCategory(cat)}
+                          className={`px-2 py-1 rounded-md whitespace-nowrap transition ${activeCategory===cat?"bg-white/10 text-white":"hover:text-white"}`}>
+                          {cat}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="flex-1 overflow-y-auto grid grid-cols-6 gap-1">
+                      {EMOJI_CATEGORIES[activeCategory].map(emoji => (
+                        <button key={emoji} type="button" onClick={() => setNewCommentText(p=>p+emoji)}
+                          className="text-xl p-1 hover:bg-white/10 rounded-lg transition">{emoji}</button>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
+            </form>
+          </div>
+        </>
+      )}
       {/* Toast Notification */}
       {toastMessage && (
         <div className="absolute top-8 z-50 rounded-xl bg-white/10 px-4 py-2 text-sm font-semibold text-white backdrop-blur-xl border border-white/10 shadow-2xl animate-fade-in">
@@ -515,149 +646,7 @@ function ReelCard({
             </p>
           </div>
 
-          {/* Interactive Comments Panel inside card */}
-          {showComments && (
-            <div className="absolute inset-0 bg-black/95 z-30 flex flex-col animate-slide-up border-t border-white/10 rounded-b-[8px]">
-              {/* Header */}
-              <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
-                <h3 className="text-base font-bold text-white">
-                  Comments <span className="text-sm font-normal text-gray-500">({comments.length})</span>
-                </h3>
-                <button
-                  onClick={() => setShowComments(false)}
-                  className="rounded-full p-1 text-gray-400 hover:bg-white/10 hover:text-white transition"
-                >
-                  <XMarkIcon className="h-6 w-6" />
-                </button>
-              </div>
-
-              {/* Comments list */}
-              <div className="flex-1 overflow-y-auto px-5 py-3 space-y-4 scrollbar-thin scrollbar-thumb-white/10">
-                {comments.length === 0 ? (
-                  <div className="flex h-full flex-col items-center justify-center text-center py-10">
-                    <ChatBubbleOvalLeftIcon className="h-10 w-10 text-gray-600 mb-2" />
-                    <p className="text-sm font-medium text-gray-500">No comments yet</p>
-                    <p className="text-xs text-gray-600 mt-1">Start the conversation!</p>
-                  </div>
-                ) : (
-                  comments.map((comment) => (
-                    <div key={comment.id} className="flex gap-3 text-sm items-start">
-                      <img
-                        src={
-                          comment.userImage
-                            ? `${API_IMAGE}${comment.userImage}`
-                            : "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=80&q=80"
-                        }
-                        alt="user"
-                        className="h-8 w-8 rounded-full object-cover border border-white/10"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <p className="font-bold text-white truncate text-xs">{comment.userName}</p>
-                        <p className="text-white/90 text-sm mt-0.5 break-words">{comment.comment}</p>
-                        <span className="text-[10px] text-gray-500 block mt-1">
-                          {new Date(comment.date).toLocaleDateString()}
-                        </span>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-
-              {/* Add Comment Input Form */}
-              <form
-                onSubmit={handleAddComment}
-                className="border-t border-white/10 p-4 bg-neutral-950 flex gap-2 items-center relative"
-              >
-                <div className="relative flex-1 flex items-center">
-                  <input
-                    type="text"
-                    placeholder="Add a comment..."
-                    value={newCommentText}
-                    onChange={(e) => setNewCommentText(e.target.value)}
-                    className="w-full rounded-full bg-white/5 border border-white/10 pl-4 pr-10 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-white/30"
-                  />
-                  
-                  {/* Smiley icon to toggle emoji picker */}
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      setShowEmojiPicker(!showEmojiPicker)
-                    }}
-                    className="absolute right-3 text-gray-400 hover:text-white transition duration-200 cursor-pointer"
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      strokeWidth={1.5}
-                      stroke="currentColor"
-                      className="w-5 h-5"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M15.182 15.182a4.5 4.5 0 0 1-6.364 0M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0ZM9.75 9.75c0 .414-.168.75-.375.75S9 10.164 9 9.75 9.168 9 9.375 9s.375.336.375.75Zm-.375 0h.008v.015h-.008V9.75Zm5.625 0c0 .414-.168.75-.375.75s-.375-.336-.375-.75.168-.75.375-.75.375.336.375.75Zm-.375 0h.008v.015h-.008V9.75Z"
-                      />
-                    </svg>
-                  </button>
-                </div>
-                
-                <button
-                  type="submit"
-                  disabled={!newCommentText.trim()}
-                  className="rounded-full bg-white px-4 py-2 text-xs font-bold text-black hover:bg-gray-200 transition disabled:opacity-50 disabled:hover:bg-white cursor-pointer"
-                >
-                  Post
-                </button>
-
-                {/* Floating Emoji Picker Popover */}
-                {showEmojiPicker && (
-                  <>
-                    <div
-                      className="fixed inset-0 z-40"
-                      onClick={() => setShowEmojiPicker(false)}
-                    ></div>
-                    <div className="absolute bottom-16 right-4 w-72 z-50 rounded-2xl bg-neutral-900 border border-white/10 p-3 shadow-2xl animate-scale-up backdrop-blur-xl flex flex-col h-64 select-none">
-                      {/* Categories header */}
-                      <div className="flex gap-2 border-b border-white/5 pb-2 mb-2 overflow-x-auto scrollbar-none text-[10px] font-bold text-gray-400 flex-shrink-0">
-                        {Object.keys(EMOJI_CATEGORIES).map((cat) => (
-                          <button
-                            key={cat}
-                            type="button"
-                            onClick={() => setActiveCategory(cat)}
-                            className={`px-2 py-1 rounded-md transition whitespace-nowrap ${
-                              activeCategory === cat
-                                ? "bg-white/10 text-white"
-                                : "hover:text-white"
-                            }`}
-                          >
-                            {cat}
-                          </button>
-                        ))}
-                      </div>
-                      
-                      {/* Emoji grid list */}
-                      <div className="flex-1 overflow-y-auto grid grid-cols-6 gap-2 p-1 scrollbar-thin scrollbar-thumb-white/10">
-                        {EMOJI_CATEGORIES[activeCategory].map((emoji) => (
-                          <button
-                            key={emoji}
-                            type="button"
-                            onClick={() => {
-                              setNewCommentText((prev) => prev + emoji)
-                            }}
-                            className="text-xl p-1 hover:bg-white/10 rounded-lg transition duration-150 cursor-pointer active:scale-90"
-                          >
-                            {emoji}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </>
-                )}
-              </form>
-            </div>
-          )}
+          {/* no inline comments panel here */}
         </div>
 
         {/* Action Panel (Right Side Icons) */}
@@ -704,7 +693,7 @@ function ReelCard({
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5" />
               </svg>
             </button>
-            <span className="text-[12px] font-medium text-white select-none">263</span>
+            <span className="text-[12px] font-medium text-white select-none">{shareCount}</span>
           </div>
 
           {/* Bookmark */}

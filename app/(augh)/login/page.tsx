@@ -32,7 +32,8 @@ try {
       console.log(err);
     }
   }
-  }
+
+  
   return (
     <div className="min-h-screen bg-white flex items-center justify-center px-4">
       <div className="flex gap-[150px] justify-center items-center gap-8">
