@@ -38,17 +38,17 @@ const EMOJI_CATEGORIES: Record<string, string[]> = {
 export default function ReelsPage() {
   const { data, isLoading, isError, error } = useGetReelsQuery({
     PageNumber: 1,
-    PageSize: 15,
+    PageSize: 10,
   })
 
   const [isMuted, setIsMuted] = useState(true)
 
   if (isLoading) {
     return (
-      <div className="flex h-full w-full items-center justify-center bg-black text-white">
+      <div className="flex h-full w-full items-center justify-center bg-white text-black">
         <div className="flex flex-col items-center gap-3">
-          <div className="h-10 w-10 animate-spin rounded-full border-4 border-white/10 border-t-pink-600"></div>
-          <span className="text-sm font-medium text-gray-400">Loading Reels...</span>
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-gray-200 border-t-pink-600"></div>
+          <span className="text-sm font-medium text-gray-500">Loading Reels...</span>
         </div>
       </div>
     )
@@ -56,13 +56,13 @@ export default function ReelsPage() {
 
   if (isError) {
     return (
-      <div className="flex h-full w-full flex-col items-center justify-center gap-4 bg-black text-red-500 px-6">
-        <div className="rounded-2xl border border-red-500/20 bg-red-500/5 p-6 text-center max-w-md">
-          <h1 className="text-xl font-extrabold mb-2">Error Loading Reels</h1>
-          <p className="text-sm text-gray-400 mb-4">
+      <div className="flex h-full w-full flex-col items-center justify-center gap-4 bg-white text-red-500 px-6">
+        <div className="rounded-2xl border border-red-200 bg-red-50/50 p-6 text-center max-w-md">
+          <h1 className="text-xl font-extrabold mb-2 text-red-600">Error Loading Reels</h1>
+          <p className="text-sm text-gray-500 mb-4">
             Could not fetch the latest Reels feed. Please check your token or try again.
           </p>
-          <pre className="rounded-xl bg-black/80 p-3 text-xs text-left overflow-x-auto border border-white/5">
+          <pre className="rounded-xl bg-gray-50 p-3 text-xs text-left overflow-x-auto border border-gray-200 text-gray-700">
             {JSON.stringify(error, null, 2)}
           </pre>
         </div>
