@@ -279,7 +279,7 @@ export default function CreatePostPage() {
   const emojis = ["😂", "😍", "😭", "👍", "❤️", "🔥", "👏", "🎉", "🙌", "😎", "✨", "💯"]
 
   return (
-    <div className="h-full w-full flex items-center justify-center bg-black overflow-y-auto py-10 px-4">
+    <div className="h-full w-full flex items-center justify-center bg-white overflow-y-auto py-10 px-4">
       {/* Premium Keyframe Animations */}
       <style>{`
         @keyframes shake {
@@ -299,15 +299,15 @@ export default function CreatePostPage() {
       `}</style>
 
       {/* ── Instagram-Style Modal Container ── */}
-      <div className="relative bg-[#262626] rounded-xl overflow-hidden shadow-2xl border border-white/10 w-full max-w-[840px] flex flex-col modal-enter"
+      <div className="relative bg-white rounded-xl overflow-hidden shadow-2xl border border-gray-200 w-full max-w-[840px] flex flex-col modal-enter"
            style={{ minHeight: 540 }}>
 
         {/* ── Modal Header ── */}
-        <div className="h-11 flex items-center justify-between px-4 border-b border-[#363636] bg-[#262626] select-none flex-shrink-0">
+        <div className="h-11 flex items-center justify-between px-4 border-b border-gray-200 bg-white select-none flex-shrink-0">
           {step !== "upload" ? (
             <button
               onClick={goBack}
-              className="text-white hover:text-gray-300 transition duration-150"
+              className="text-black hover:text-gray-600 transition duration-150"
             >
               <ArrowLeftIcon className="w-5 h-5 stroke-[2.5]" />
             </button>
@@ -315,7 +315,7 @@ export default function CreatePostPage() {
             <div className="w-5" />
           )}
 
-          <span className="text-white font-semibold text-sm tracking-wide">
+          <span className="text-black font-semibold text-sm tracking-wide">
             {stepTitle[step]}
           </span>
 
@@ -344,7 +344,7 @@ export default function CreatePostPage() {
 
           {/* ══════════════════════ STEP: UPLOAD ══════════════════════ */}
           {step === "upload" && (
-            <div className="flex-1 flex flex-col items-center justify-center py-20 px-8 bg-[#181818]">
+            <div className="flex-1 flex flex-col items-center justify-center py-20 px-8 bg-white">
               <div
                 onDragEnter={handleDrag}
                 onDragOver={handleDrag}
@@ -354,7 +354,7 @@ export default function CreatePostPage() {
                 className={`flex flex-col items-center gap-6 cursor-pointer w-full max-w-md rounded-2xl border-2 border-dashed p-12 transition-all duration-300 ${
                   dragActive
                     ? "border-[#0095f6] bg-[#0095f6]/5 scale-102"
-                    : "border-white/15 hover:border-white/30 hover:bg-white/2"
+                    : "border-gray-200 hover:border-gray-400 hover:bg-gray-50"
                 }`}
               >
                 <input
@@ -366,14 +366,14 @@ export default function CreatePostPage() {
                 />
 
                 {/* Highly Authentic Instagram Icon Asset */}
-                <div className="text-white">
+                <div className="text-black">
                   <svg aria-label="Icon to represent media such as images or videos" className="mx-auto" color="currentColor" fill="currentColor" height="77" role="img" viewBox="0 0 97.6 77.3" width="96">
                     <path d="M16.3 24h.3c.1-.2.2-.4.4-.6l2-2.9C20 19 21.8 18 23.5 18h14.7c1.7 0 3.5 1 4.3 2.6l2 2.9c.1.2.3.4.4.6h25.9c3.9 0 7.1 3.2 7.1 7.1v31.8c0 3.9-3.2 7.1-7.1 7.1H16.3c-3.9 0-7.1-3.2-7.1-7.1V31.1c0-3.9 3.2-7.1 7.1-7.1zm54.3 23c-4.2 0-7.7-3.4-7.7-7.7s3.4-7.7 7.7-7.7 7.7 3.4 7.7 7.7-3.5 7.7-7.7 7.7zM16.3 20c-6.1 0-11.1 5-11.1 11.1v31.8c0 6.1 5 11.1 11.1 11.1h54.3c6.1 0 11.1-5 11.1-11.1V31.1c0-6.1-5-11.1-11.1-11.1H60l-2.4-3.6C56 13.9 53 12 49.5 12H23.5c-3.5 0-6.5 1.9-8.1 4.4L13 20H16.3z" fill="currentColor"></path>
                   </svg>
                 </div>
 
                 <div className="text-center space-y-1">
-                  <p className="text-white text-lg font-light">Drag photos here</p>
+                  <p className="text-black text-lg font-light">Drag photos here</p>
                   <p className="text-[11px] text-gray-500 font-semibold tracking-wide uppercase">JPG, PNG, WEBP formats supported</p>
                 </div>
 
@@ -415,7 +415,7 @@ export default function CreatePostPage() {
               </div>
 
               {/* Right Side: Aspect Ratio Selector Panel */}
-              <div className="w-full md:w-[280px] bg-[#262626] border-t md:border-t-0 md:border-l border-[#363636] flex flex-col p-4 flex-shrink-0">
+              <div className="w-full md:w-[280px] bg-white border-t md:border-t-0 md:border-l border-gray-200 flex flex-col p-4 flex-shrink-0">
                 <span className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-3.5">Select Aspect Ratio</span>
                 <div className="flex flex-col gap-2">
                   {RATIOS.map(({ label, value, Icon }) => (
@@ -424,8 +424,8 @@ export default function CreatePostPage() {
                       onClick={() => handleRatioChange(value)}
                       className={`flex items-center gap-3.5 px-4 py-3.5 rounded-xl text-left text-xs font-bold transition-all duration-150 ${
                         ratio === value
-                          ? "bg-white/10 text-white shadow-md border border-white/5"
-                          : "text-gray-400 hover:text-white hover:bg-white/5 border border-transparent"
+                          ? "bg-gray-100 text-black shadow-sm border border-gray-200/50"
+                          : "text-gray-500 hover:text-black hover:bg-gray-50 border border-transparent"
                       }`}
                     >
                       <div className={ratio === value ? "text-[#0095f6]" : "text-gray-400"}>
@@ -465,7 +465,7 @@ export default function CreatePostPage() {
               </div>
 
               {/* Right Side: Premium Filter Grid Scroll Container */}
-              <div className="w-full md:w-[280px] bg-[#262626] border-t md:border-t-0 md:border-l border-[#363636] flex flex-col p-4 flex-shrink-0 overflow-y-auto" style={{ maxHeight: 480 }}>
+              <div className="w-full md:w-[280px] bg-white border-t md:border-t-0 md:border-l border-gray-200 flex flex-col p-4 flex-shrink-0 overflow-y-auto" style={{ maxHeight: 480 }}>
                 <span className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-3">Filters</span>
                 <div className="grid grid-cols-2 gap-3">
                   {FILTERS.map((f) => (
@@ -474,12 +474,12 @@ export default function CreatePostPage() {
                       onClick={() => setSelectedFilter(f.css)}
                       className={`flex flex-col items-center gap-1.5 rounded-xl p-2 transition-all duration-150 ${
                         selectedFilter === f.css
-                          ? "bg-white/10 ring-2 ring-[#0095f6]"
-                          : "hover:bg-white/5 border border-transparent"
+                          ? "bg-gray-100 ring-2 ring-[#0095f6]"
+                          : "hover:bg-gray-50 border border-transparent"
                       }`}
                     >
                       {/* Stylized small preview thumbnail */}
-                      <div className="w-full aspect-square rounded-lg overflow-hidden border border-white/5">
+                      <div className="w-full aspect-square rounded-lg overflow-hidden border border-gray-200">
                         <img
                           src={imageURL}
                           alt={f.name}
@@ -488,7 +488,7 @@ export default function CreatePostPage() {
                         />
                       </div>
                       <span className={`text-[10px] font-semibold tracking-wide ${
-                        selectedFilter === f.css ? "text-[#0095f6]" : "text-gray-400"
+                        selectedFilter === f.css ? "text-[#0095f6]" : "text-gray-500"
                       }`}>
                         {f.name}
                       </span>
@@ -525,16 +525,16 @@ export default function CreatePostPage() {
               </div>
 
               {/* Right Side: Instagram Details & Sharing sidebar */}
-              <div className="w-full md:w-[320px] bg-[#262626] border-t md:border-t-0 md:border-l border-[#363636] flex flex-col flex-shrink-0 select-none">
+              <div className="w-full md:w-[320px] bg-white border-t md:border-t-0 md:border-l border-gray-200 flex flex-col flex-shrink-0 select-none">
                 
                 {/* User Info Header */}
                 <div className="flex items-center gap-3 p-4">
                   <div className="h-7 w-7 rounded-full bg-gradient-to-tr from-yellow-500 via-pink-600 to-purple-600 p-[1.5px]">
-                    <div className="h-full w-full rounded-full bg-[#262626] flex items-center justify-center text-white text-[11px] font-black">
+                    <div className="h-full w-full rounded-full bg-gray-100 flex items-center justify-center text-black text-[11px] font-black">
                       U
                     </div>
                   </div>
-                  <span className="text-white text-xs font-bold">user</span>
+                  <span className="text-black text-xs font-bold">user</span>
                 </div>
 
                 {/* Caption Textarea Container */}
@@ -545,15 +545,15 @@ export default function CreatePostPage() {
                     placeholder="Write a caption..."
                     maxLength={2200}
                     rows={6}
-                    className="w-full bg-transparent resize-none text-white text-sm placeholder-gray-500 focus:outline-none leading-relaxed"
+                    className="w-full bg-transparent resize-none text-black text-sm placeholder-gray-500 focus:outline-none leading-relaxed"
                   />
                   
                   {/* Emoji Quick Picker Bar */}
-                  <div className="flex justify-between items-center py-2.5 border-b border-[#363636]">
+                  <div className="flex justify-between items-center py-2.5 border-b border-gray-100">
                     <button
                       type="button"
                       onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                      className="text-gray-400 hover:text-white transition duration-150"
+                      className="text-gray-400 hover:text-black transition duration-150"
                     >
                       <FaceSmileIcon className="w-5.5 h-5.5" />
                     </button>
@@ -564,7 +564,7 @@ export default function CreatePostPage() {
 
                   {/* Quick Emojis Grid */}
                   {showEmojiPicker && (
-                    <div className="flex flex-wrap gap-2.5 py-3 border-b border-[#363636] animate-fade-in">
+                    <div className="flex flex-wrap gap-2.5 py-3 border-b border-gray-100 animate-fade-in">
                       {emojis.map((emoji) => (
                         <button
                           key={emoji}
@@ -583,15 +583,15 @@ export default function CreatePostPage() {
                 </div>
 
                 {/* Extra Options Accordion/Drawer List */}
-                <div className="flex-1 flex flex-col divide-y divide-[#363636]">
+                <div className="flex-1 flex flex-col divide-y divide-gray-100">
                   {/* Add Location Row */}
                   <div className="flex flex-col">
                     <div
                       onClick={() => setShowLocationInput(!showLocationInput)}
-                      className="flex items-center justify-between px-4 py-3.5 text-white hover:bg-white/2 cursor-pointer transition duration-150"
+                      className="flex items-center justify-between px-4 py-3.5 text-black hover:bg-gray-50 cursor-pointer transition duration-150"
                     >
                       <div className="flex items-center gap-3">
-                        <MapPinIcon className="h-4.5 w-4.5 text-gray-300" />
+                        <MapPinIcon className="h-4.5 w-4.5 text-gray-500" />
                         <span className="text-xs font-semibold">
                           {location ? `Location: ${location}` : "Add location"}
                         </span>
@@ -606,25 +606,25 @@ export default function CreatePostPage() {
                           value={location}
                           onChange={(e) => setLocation(e.target.value)}
                           placeholder="Search or add location..."
-                          className="w-full bg-[#181818] border border-white/10 rounded-lg py-2 px-3 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-[#0095f6]/50 transition"
+                          className="w-full bg-gray-50 border border-gray-200 rounded-lg py-2 px-3 text-xs text-black placeholder-gray-500 focus:outline-none focus:border-[#0095f6]/50 transition"
                         />
                       </div>
                     )}
                   </div>
 
                   {/* Accessibility Option Row */}
-                  <div className="flex items-center justify-between px-4 py-3.5 text-white hover:bg-white/2 cursor-pointer transition duration-150">
+                  <div className="flex items-center justify-between px-4 py-3.5 text-black hover:bg-gray-50 cursor-pointer transition duration-150">
                     <div className="flex items-center gap-3">
-                      <UserIcon className="h-4.5 w-4.5 text-gray-300" />
+                      <UserIcon className="h-4.5 w-4.5 text-gray-500" />
                       <span className="text-xs font-semibold">Accessibility</span>
                     </div>
                     <ChevronRightIcon className="h-3.5 w-3.5 text-gray-400" />
                   </div>
 
                   {/* Advanced Settings Row */}
-                  <div className="flex items-center justify-between px-4 py-3.5 text-white hover:bg-white/2 cursor-pointer transition duration-150">
+                  <div className="flex items-center justify-between px-4 py-3.5 text-black hover:bg-gray-50 cursor-pointer transition duration-150">
                     <div className="flex items-center gap-3">
-                      <Cog6ToothIcon className="h-4.5 w-4.5 text-gray-300" />
+                      <Cog6ToothIcon className="h-4.5 w-4.5 text-gray-500" />
                       <span className="text-xs font-semibold">Advanced settings</span>
                     </div>
                     <ChevronRightIcon className="h-3.5 w-3.5 text-gray-400" />
@@ -641,14 +641,14 @@ export default function CreatePostPage() {
       {/* ── Muvaffaqiyat (Success) Modal ── */}
       {successModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm animate-fade-in p-4">
-          <div className="bg-[#262626] rounded-2xl border border-white/10 p-8 max-w-sm w-full text-center shadow-2xl">
+          <div className="bg-white rounded-2xl border border-gray-200 p-8 max-w-sm w-full text-center shadow-2xl">
             <div className="h-14 w-14 rounded-full bg-emerald-500/10 text-emerald-400 flex items-center justify-center mx-auto mb-4 border border-emerald-500/20">
               <svg className="h-7 w-7" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
               </svg>
             </div>
-            <h3 className="text-white text-lg font-bold mb-1.5">Post shared!</h3>
-            <p className="text-gray-400 text-xs leading-relaxed mb-6">Your post has been successfully shared to the Reels feed.</p>
+            <h3 className="text-black text-lg font-bold mb-1.5">Post shared!</h3>
+            <p className="text-gray-500 text-xs leading-relaxed mb-6">Your post has been successfully shared to the Reels feed.</p>
             <button
               onClick={() => setSuccessModal(false)}
               className="w-full bg-[#0095f6] hover:bg-[#1aa3ff] text-white font-bold py-2.5 rounded-xl transition duration-150"
