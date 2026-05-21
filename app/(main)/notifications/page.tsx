@@ -174,13 +174,13 @@ export default function NotificationsPage() {
   }, [filteredNotifications])
 
   return (
-    <div className="h-full w-full bg-black text-white flex justify-center overflow-y-auto scrollbar-thin scrollbar-thumb-white/10">
-      <div className="w-full max-w-[500px] min-h-screen border-x border-white/10 flex flex-col bg-[#000]">
+    <div className="h-full w-full bg-white text-black flex justify-center overflow-y-auto scrollbar-thin scrollbar-thumb-gray-200">
+      <div className="w-full max-w-[500px] min-h-screen border-x border-gray-200 flex flex-col bg-white">
         
         {/* Header Section */}
-        <div className="px-5 pt-6 pb-4 border-b border-white/5 flex items-center justify-between sticky top-0 bg-black/90 backdrop-blur-md z-30">
+        <div className="px-5 pt-6 pb-4 border-b border-gray-100 flex items-center justify-between sticky top-0 bg-white/90 backdrop-blur-md z-30">
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold tracking-tight text-white">
+            <h1 className="text-2xl font-bold tracking-tight text-black">
               Notifications
             </h1>
             {unreadCount > 0 && (
@@ -190,17 +190,17 @@ export default function NotificationsPage() {
           
           <button 
             onClick={() => window.history.back()}
-            className="p-1.5 rounded-full hover:bg-white/10 text-gray-400 hover:text-white transition duration-200"
+            className="p-1.5 rounded-full hover:bg-gray-100 text-gray-500 hover:text-black transition duration-200"
           >
             <XMarkIcon className="h-6 w-6" />
           </button>
         </div>
 
         {/* Developer / Control Panel */}
-        <div className="mx-4 mt-4 p-3.5 rounded-2xl bg-neutral-900/60 border border-white/5 flex flex-col gap-3">
+        <div className="mx-4 mt-4 p-3.5 rounded-2xl bg-gray-50 border border-gray-100 flex flex-col gap-3">
           <div className="flex justify-between items-center">
-            <span className="text-[11px] uppercase tracking-wider font-extrabold text-neutral-500">Developer Actions</span>
-            <span className="text-xs font-bold text-gray-400 bg-white/5 px-2 py-0.5 rounded-md">
+            <span className="text-[11px] uppercase tracking-wider font-extrabold text-gray-400">Developer Actions</span>
+            <span className="text-xs font-bold text-gray-600 bg-gray-100 px-2 py-0.5 rounded-md">
               {unreadCount} unread
             </span>
           </div>
@@ -216,7 +216,7 @@ export default function NotificationsPage() {
             <button
               onClick={() => dispatch(readAllNotifications())}
               disabled={unreadCount === 0}
-              className="flex items-center justify-center gap-1 py-2 px-1 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-white text-[11px] font-bold transition disabled:opacity-40 disabled:pointer-events-none active:scale-95"
+              className="flex items-center justify-center gap-1 py-2 px-1 rounded-xl bg-gray-100 border border-gray-200 hover:bg-gray-200 text-black text-[11px] font-bold transition disabled:opacity-40 disabled:pointer-events-none active:scale-95"
             >
               <CheckIcon className="h-3.5 w-3.5" />
               Read All
@@ -224,7 +224,7 @@ export default function NotificationsPage() {
             <button
               onClick={() => dispatch(clearNotifications())}
               disabled={notifications.length === 0}
-              className="flex items-center justify-center gap-1 py-2 px-1 rounded-xl bg-red-950/20 border border-red-500/25 hover:bg-red-500/10 text-red-400 text-[11px] font-bold transition disabled:opacity-30 disabled:pointer-events-none active:scale-95"
+              className="flex items-center justify-center gap-1 py-2 px-1 rounded-xl bg-red-50 border border-red-200 hover:bg-red-100 text-red-600 text-[11px] font-bold transition disabled:opacity-30 disabled:pointer-events-none active:scale-95"
             >
               <TrashIcon className="h-3.5 w-3.5" />
               Clear
@@ -233,13 +233,13 @@ export default function NotificationsPage() {
         </div>
 
         {/* Top Pill Tab Filters */}
-        <div className="flex gap-2 px-5 py-4 border-b border-white/5 overflow-x-auto scrollbar-none flex-shrink-0">
+        <div className="flex gap-2 px-5 py-4 border-b border-gray-100 overflow-x-auto scrollbar-none flex-shrink-0">
           <button
             onClick={() => setActiveTab("all")}
             className={`px-4 py-1.5 rounded-full text-xs font-bold tracking-wide transition-all duration-200 whitespace-nowrap ${
               activeTab === "all"
-                ? "bg-[#262626] text-white"
-                : "bg-white/5 text-gray-400 hover:text-white hover:bg-white/10"
+                ? "bg-gray-800 text-white"
+                : "bg-gray-100 text-gray-600 hover:text-black hover:bg-gray-200"
             }`}
           >
             All
@@ -248,8 +248,8 @@ export default function NotificationsPage() {
             onClick={() => setActiveTab("following")}
             className={`px-4 py-1.5 rounded-full text-xs font-bold tracking-wide transition-all duration-200 whitespace-nowrap ${
               activeTab === "following"
-                ? "bg-[#262626] text-white"
-                : "bg-white/5 text-gray-400 hover:text-white hover:bg-white/10"
+                ? "bg-gray-800 text-white"
+                : "bg-gray-100 text-gray-600 hover:text-black hover:bg-gray-200"
             }`}
           >
             People you follow
@@ -258,8 +258,8 @@ export default function NotificationsPage() {
             onClick={() => setActiveTab("comments")}
             className={`px-4 py-1.5 rounded-full text-xs font-bold tracking-wide transition-all duration-200 whitespace-nowrap ${
               activeTab === "comments"
-                ? "bg-[#262626] text-white"
-                : "bg-white/5 text-gray-400 hover:text-white hover:bg-white/10"
+                ? "bg-gray-800 text-white"
+                : "bg-gray-100 text-gray-600 hover:text-black hover:bg-gray-200"
             }`}
           >
             Comments
@@ -268,14 +268,14 @@ export default function NotificationsPage() {
 
         {/* Meta Verified static information box (like the reference image) */}
         {activeTab === "all" && notifications.length > 0 && (
-          <div className="mx-5 mt-4 p-4 rounded-xl bg-white/2 border border-white/5 flex items-start gap-3.5 hover:bg-white/4 transition duration-200">
+          <div className="mx-5 mt-4 p-4 rounded-xl bg-gray-50 border border-gray-100 flex items-start gap-3.5 hover:bg-gray-100 transition duration-200">
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#0095f6]/10 text-[#0095f6] flex-shrink-0">
               <svg viewBox="0 0 24 24" fill="currentColor" className="w-5.5 h-5.5">
                 <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
               </svg>
             </div>
-            <div className="flex-1 text-sm leading-tight text-gray-300">
-              <p className="font-semibold text-white">Meta Verified subscription status</p>
+            <div className="flex-1 text-sm leading-tight text-gray-700">
+              <p className="font-semibold text-black">Meta Verified subscription status</p>
               <p className="text-[12px] text-gray-500 mt-1 leading-snug">
                 Your Meta Verified subscription was not completed because we couldn&apos;t verify your identity. <span className="text-[#0095f6] cursor-pointer hover:underline">Complete verification</span> • 23 min.
               </p>
@@ -287,10 +287,10 @@ export default function NotificationsPage() {
         <div className="flex-1 px-5 py-4 space-y-6">
           {filteredNotifications.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-24 text-center">
-              <div className="relative mb-5 flex h-20 w-20 items-center justify-center rounded-full bg-[#121212] border border-white/5 text-gray-400">
-                <BellIcon className="h-10 w-10 text-white" />
+              <div className="relative mb-5 flex h-20 w-20 items-center justify-center rounded-full bg-gray-50 border border-gray-100 text-gray-600">
+                <BellIcon className="h-10 w-10 text-black" />
               </div>
-              <h3 className="text-lg font-bold text-white mb-1">No notifications</h3>
+              <h3 className="text-lg font-bold text-black mb-1">No notifications</h3>
               <p className="text-xs text-gray-500 max-w-[280px]">
                 Activities on your profile will appear here. Toggle developer controls to simulate updates.
               </p>
@@ -299,7 +299,7 @@ export default function NotificationsPage() {
             groupedNotifications.map((group) => (
               <div key={group.title} className="space-y-4 animate-fade-in">
                 {/* Date Group Heading */}
-                <h3 className="text-sm font-bold text-white border-b border-white/5 pb-1">
+                <h3 className="text-sm font-bold text-black border-b border-gray-100 pb-1">
                   {group.title}
                 </h3>
 
@@ -326,7 +326,7 @@ export default function NotificationsPage() {
                           <div className={`p-[1.5px] rounded-full ${
                             !item.isRead 
                               ? "bg-gradient-to-tr from-yellow-500 via-pink-500 to-purple-600" 
-                              : "bg-neutral-800"
+                              : "bg-gray-200"
                           }`}>
                             <img
                               src={
@@ -334,14 +334,14 @@ export default function NotificationsPage() {
                                 `https://ui-avatars.com/api/?name=${item.userName}&background=333&color=fff`
                               }
                               alt={item.userName}
-                              className="h-11 w-11 rounded-full object-cover border-2 border-black bg-neutral-900"
+                              className="h-11 w-11 rounded-full object-cover border-2 border-white bg-gray-100"
                             />
                           </div>
                         </div>
 
                         {/* Content text description */}
                         <div className="flex-1 min-w-0 text-[13px] leading-snug">
-                          <span className="font-bold text-white hover:underline cursor-pointer inline-flex items-center gap-1 mr-1">
+                          <span className="font-bold text-black hover:underline cursor-pointer inline-flex items-center gap-1 mr-1">
                             {item.userName}
                             {isVerified(item.userName) && (
                               <svg viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5 text-[#0095f6] inline flex-shrink-0">
@@ -349,7 +349,7 @@ export default function NotificationsPage() {
                               </svg>
                             )}
                           </span>
-                          <span className="text-gray-300 font-normal">
+                          <span className="text-gray-700 font-normal">
                             {item.text}
                           </span>
                           <span className="text-gray-500 font-semibold ml-1.5 whitespace-nowrap">
@@ -362,19 +362,19 @@ export default function NotificationsPage() {
                           {isFollowType ? (
                             <button
                               onClick={(e) => {
-                                e.stopPropagation()
-                                handleFollowToggle(item.userName)
+                                  e.stopPropagation()
+                                  handleFollowToggle(item.userName)
                               }}
                               className={`rounded-lg px-4 py-1.5 text-xs font-bold transition duration-200 select-none ${
                                 isUserFollowed
-                                  ? "bg-[#262626] text-white hover:bg-[#363636]"
+                                  ? "bg-gray-100 text-black hover:bg-gray-200"
                                   : "bg-[#0095f6] hover:bg-[#1aa3ff] text-white"
                               }`}
                             >
                               {isUserFollowed ? "Following" : "Follow back"}
                             </button>
                           ) : (
-                            <div className="relative h-10 w-10 rounded-lg overflow-hidden border border-white/10 hover:opacity-85 transition cursor-pointer select-none">
+                            <div className="relative h-10 w-10 rounded-lg overflow-hidden border border-gray-200 hover:opacity-85 transition cursor-pointer select-none">
                               <img
                                 src={getPostPreview(item.id)}
                                 alt="post preview"
