@@ -14,7 +14,7 @@ export const profileApi = createApi({
     },
   }),
   // Теги для управления кэшем и автоматического обновления интерфейса
-  tagTypes: ["MyProfile", "UserProfile", "FollowStatus", "AllPosts"],
+  tagTypes: ["MyProfile", "UserProfile", "FollowStatus", "AllPosts", "Subscribers", "Subscriptions"],
   endpoints: (builder) => ({
     // ==========================================
     // 1. ACCOUNT (АВТОРИЗАЦИЯ И СБРОС ПАРОЛЕЙ)
@@ -69,8 +69,8 @@ export const profileApi = createApi({
     // ==========================================
     // 3. FOLLOWING RELATION SHIP (ПОДПИСКИ)
     // ==========================================
-    getSubscribers: builder.query({ query: () => "/FollowingRelationShip/get-subscribers" }),
-    getSubscriptions: builder.query({ query: () => "/FollowingRelationShip/get-subscriptions" }),
+    getSubscribers: builder.query({ query: () => "/FollowingRelationShip/get-subscribers", providesTags: ["Subscribers"] }),
+    getSubscriptions: builder.query({ query: () => "/FollowingRelationShip/get-subscriptions", providesTags: ["Subscriptions"] }),
     
     addFollowingRelationShip: builder.mutation({
       query: (userId) => ({
@@ -80,6 +80,8 @@ export const profileApi = createApi({
       // Перезапрашиваем данные профиля и статус кнопки, чтобы счетчик сразу изменился
       invalidatesTags: (result, error, userId) => [
         "MyProfile",
+        "Subscribers",
+        "Subscriptions",
         { type: "UserProfile", id: userId },
         { type: "FollowStatus", id: userId }
       ],
@@ -91,6 +93,8 @@ export const profileApi = createApi({
       }),
       invalidatesTags: (result, error, userId) => [
         "MyProfile",
+        "Subscribers",
+        "Subscriptions",
         { type: "UserProfile", id: userId },
         { type: "FollowStatus", id: userId }
       ],
@@ -104,12 +108,13 @@ export const profileApi = createApi({
       providesTags: ["AllPosts"],
     }),
     getMyPosts: builder.query({ 
-      query: () => "/Post/get-my-posts" 
+      query: () => "/Post/get-my-posts",
+      providesTags: ["AllPosts"],
     }),
-    getPostById: builder.query({
-      query: (postId) => `/Post/get-post-by-id?postId=${postId}`,
-      providesTags: (result, error, postId) => [{ type: "AllPosts", id: postId }],
-    }),
+   getPostById: builder.query({
+  query: (id) => `/Post/get-post-by-id?id=${id}`,
+  providesTags: (result, error, id) => [{ type: 'Post', id }],
+}),
     addPost: builder.mutation<any, FormData>({
       query: (body) => ({
         url: "/Post/add-post",
@@ -140,6 +145,7 @@ export const profileApi = createApi({
       }),
       invalidatesTags: ["AllPosts"],
     }),
+    
     deleteComment: builder.mutation({
       query: (commentId) => ({
         url: `/Post/delete-comment?commentId=${commentId}`,
@@ -183,4 +189,5 @@ export const {
   useAddCommentMutation,
   useDeleteCommentMutation,
   useAddPostFavoriteMutation,
+  
 } = profileApi; 

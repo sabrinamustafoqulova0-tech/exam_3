@@ -5,7 +5,7 @@ import { useRouter, usePathname } from 'next/navigation'
 import { useGetUsersQuery } from '../services/Search'
 import { useGetMyProfileQuery } from '../services/Profile'
 
-// Иконки из lucide-react (используем свойства fill для активного состояния, где это применимо)
+// Иконки из lucide-react
 import { 
   Home, 
   Search, 
@@ -19,6 +19,13 @@ import {
 
 const IMAGE_BASE_URL = "https://instagram-api.softclub.tj/images";
 
+interface HistoryUser {
+  id: string
+  userName?: string
+  fullName?: string
+  image?: string
+}
+
 export default function Navbar() {
   const router = useRouter()
   const pathname = usePathname()
@@ -26,6 +33,19 @@ export default function Navbar() {
   const [isOpenSearch, setIsOpenSearch] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [debouncedQuery, setDebouncedQuery] = useState('')
+  const [searchHistory, setSearchHistory] = useState<HistoryUser[]>([])
+
+  // Загружаем историю поиска из localStorage при монтировании
+  useEffect(() => {
+    const savedHistory = localStorage.getItem('instagram_recent_searches')
+    if (savedHistory) {
+      try {
+        setSearchHistory(JSON.parse(savedHistory))
+      } catch (e) {
+        console.error('Ошибка чтения истории поиска:', e)
+      }
+    }
+  }, [])
 
   // Эффект Debounce для оптимизации запросов к поиску
   useEffect(() => {
@@ -64,13 +84,57 @@ export default function Navbar() {
     user?.fullName?.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
-  const handleUserClick = (userId: string) => {
+  // Клик по пользователю: сохраняем в историю и переходим
+  const handleUserClick = (user: HistoryUser) => {
     setIsOpenSearch(false)
     setSearchQuery('')
     setDebouncedQuery('')
-    router.push(`/user/${userId}`)
+
+    setSearchHistory((prevHistory) => {
+      const filtered = prevHistory.filter((item) => item.id !== user.id)
+      const updated = [user, ...filtered].slice(0, 10) // Храним топ-10 последних
+      localStorage.setItem('instagram_recent_searches', JSON.stringify(updated))
+      return updated
+    })
+
+    router.push(`/user/${user.id}`)
   }
 
+  // Очистить всю историю поиска
+  const clearAllHistory = () => {
+    setSearchHistory([])
+    localStorage.removeItem('instagram_recent_searches')
+  }
+
+  // Удалить конкретного пользователя из истории
+  const removeHistoryItem = (e: React.MouseEvent, userId: string) => {
+    e.stopPropagation() // Останавливаем клик, чтобы не перейти на профиль
+    setSearchHistory((prevHistory) => {
+      const updated = prevHistory.filter((item) => item.id !== userId)
+      localStorage.setItem('instagram_recent_searches', JSON.stringify(updated))
+      return updated
+    })
+  }
+
+  // Хелпер для разбора аватарки и скрытия "женщины"
+const getAvatarData = (user: any) => {
+    // Берём именно то поле, которое присылает сервер (avatar, image или imagePath)
+    const rawImage = (user?.avatar || user?.image || user?.imagePath || '').trim();
+    
+    // Строим полный путь к картинке
+    const avatarUrl = rawImage 
+      ? (rawImage.startsWith('http') ? rawImage : `${IMAGE_BASE_URL}/${rawImage}`)
+      : '';
+    
+    // Проверяем, пустая ли ссылка или содержит ли она дефолтную женщину с Unsplash
+    const isDefaultWoman = avatarUrl.includes('photo-1534528741775-53994a69daeb') || !rawImage;
+    
+    return {
+      hasAvatar: !isDefaultWoman,
+      avatarUrl: avatarUrl,
+      firstLetter: (user.userName || user.fullName || 'U').charAt(0)
+    }
+  }
   return (
     <div className="flex fixed left-0 top-0 z-50 h-screen select-none">
       
@@ -83,64 +147,60 @@ export default function Navbar() {
         <div className="flex flex-col gap-2">
           {/* Логотип Instagram */}
           <div className="mb-7 px-3 h-[40px] flex items-center justify-start overflow-hidden">
-  {isOpenSearch ? (
-    <Link href="/">
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        viewBox="0 0 24 24"
-        className="w-7 h-7 min-w-[28px]"
-        fill="none"
-      >
-        <defs>
-          <linearGradient id="instagram-gradient" x1="0%" y1="100%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#feda75" />
-            <stop offset="25%" stopColor="#fa7e1e" />
-            <stop offset="50%" stopColor="#d62976" />
-            <stop offset="75%" stopColor="#962fbf" />
-            <stop offset="100%" stopColor="#4f5bd5" />
-          </linearGradient>
-        </defs>
+            {isOpenSearch ? (
+              <Link href="/">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  className="w-7 h-7 min-w-[28px]"
+                  fill="none"
+                >
+                  <defs>
+                    <linearGradient id="instagram-gradient" x1="0%" y1="100%" x2="100%" y2="0%">
+                      <stop offset="0%" stopColor="#feda75" />
+                      <stop offset="25%" stopColor="#fa7e1e" />
+                      <stop offset="50%" stopColor="#d62976" />
+                      <stop offset="75%" stopColor="#962fbf" />
+                      <stop offset="100%" stopColor="#4f5bd5" />
+                    </linearGradient>
+                  </defs>
+                  <rect
+                    x="3"
+                    y="3"
+                    width="18"
+                    height="18"
+                    rx="5"
+                    stroke="url(#instagram-gradient)"
+                    strokeWidth="2"
+                  />
+                  <circle
+                    cx="12"
+                    cy="12"
+                    r="4"
+                    stroke="url(#instagram-gradient)"
+                    strokeWidth="2"
+                  />
+                  <circle
+                    cx="17"
+                    cy="7"
+                    r="1.2"
+                    fill="url(#instagram-gradient)"
+                  />
+                </svg>
+              </Link>
+            ) : (
+              <Link href="/" className="flex items-center gap-2">
+                <img
+                  src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/2a/Instagram_logo.svg/1200px-Instagram_logo.svg.png"
+                  alt="Instagram"
+                  className="w-[120px] object-contain"
+                />
+              </Link>
+            )}
+          </div>
 
-        <rect
-          x="3"
-          y="3"
-          width="18"
-          height="18"
-          rx="5"
-          stroke="url(#instagram-gradient)"
-          strokeWidth="2"
-        />
-
-        <circle
-          cx="12"
-          cy="12"
-          r="4"
-          stroke="url(#instagram-gradient)"
-          strokeWidth="2"
-        />
-
-        <circle
-          cx="17"
-          cy="7"
-          r="1.2"
-          fill="url(#instagram-gradient)"
-        />
-      </svg>
-    </Link>
-  ) : (
-    <Link href="/" className="flex items-center gap-2">
-      <img
-        src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/2a/Instagram_logo.svg/1200px-Instagram_logo.svg.png"
-        alt="Instagram"
-        className="w-[120px] object-contain"
-      />
-    </Link>
-  )}
-</div>
-
-          {/* Пункты Навигации с логикой подсветки активных иконок */}
+          {/* Пункты Навигации */}
           <div className="flex flex-col gap-1">
-            
             {/* HOME */}
             <Link href="/home" className="flex items-center gap-4 p-3 rounded-xl hover:bg-black/5 transition-colors group">
               <Home 
@@ -269,13 +329,61 @@ export default function Navbar() {
         
         <div className="flex flex-col h-[calc(100%-165px)]">
           {searchQuery.trim() === '' ? (
+            // ТЕПЕРЬ ТУТ ПОЛНОЦЕННАЯ РАБОЧАЯ ИСТОРИЯ ИЗ LOCALSTORAGE (RECENT)
             <div className="flex flex-col h-full">
-              <div className="text-[15px] font-semibold text-black mb-4 px-1">Recent</div>
-              <div className="flex flex-col items-center justify-center flex-1 text-center text-[14px] text-gray-400 font-normal pb-20">
-                No recent searches.
+              <div className="flex items-center justify-between mb-4 px-1">
+                <div className="text-[15px] font-semibold text-black">Recent</div>
+                {searchHistory.length > 0 && (
+                  <button 
+                    onClick={clearAllHistory}
+                    className="text-[14px] font-semibold text-[#0095f6] hover:text-[#00376b] transition-colors"
+                  >
+                    Clear all
+                  </button>
+                )}
               </div>
+              
+              {searchHistory.length === 0 ? (
+                <div className="flex flex-col items-center justify-center flex-1 text-center text-[14px] text-gray-400 font-normal pb-20">
+                  No recent searches.
+                </div>
+              ) : (
+                <div className="flex flex-col gap-1 overflow-y-auto flex-1 pr-1 custom-scrollbar">
+                  {searchHistory.map((user) => {
+                    const { hasAvatar, avatarUrl, firstLetter } = getAvatarData(user)
+                    return (
+                      <div 
+                        key={`history-${user.id}`} 
+                        onClick={() => handleUserClick(user)}
+                        className="flex items-center justify-between p-2.5 rounded-xl hover:bg-gray-50 cursor-pointer transition-colors active:scale-[0.99]"
+                      >
+                        <div className="flex items-center gap-3 overflow-hidden">
+                          <div className="w-11 h-11 rounded-full bg-gray-100 overflow-hidden flex-shrink-0 border border-gray-200 flex items-center justify-center text-[16px] font-bold text-[#262626] uppercase">
+                            {hasAvatar ? (
+                              <img src={avatarUrl} alt={user.userName} className="w-full h-full object-cover" />
+                            ) : (
+                              <span>{firstLetter}</span>
+                            )}
+                          </div>
+                          <div className="flex flex-col truncate">
+                            <span className="text-[14px] font-semibold text-[#262626] leading-tight truncate">{user.userName || 'username'}</span>
+                            <span className="text-[14px] text-gray-400 leading-tight truncate mt-0.5 font-normal">{user.fullName || ''}</span>
+                          </div>
+                        </div>
+                        <button 
+                          onClick={(e) => removeHistoryItem(e, user.id)}
+                          className="text-gray-400 hover:text-black p-2 text-[14px]"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
             </div>
           ) : (
+            // ДИНАМИЧЕСКИЕ РЕЗУЛЬТАТЫ С СЕРВЕРА
             <div className="flex flex-col h-full">
               <div className="text-[15px] font-semibold text-black mb-4 px-1">Accounts</div>
               
@@ -284,25 +392,27 @@ export default function Navbar() {
                   <div className="text-gray-400 text-center py-10 text-[14px]">Searching accounts...</div>
                 ) : filteredUsers.length > 0 ? (
                   filteredUsers.map((user: any) => {
-                    const finalAvatar = user?.image 
-                      ? `${IMAGE_BASE_URL}/${user.image}` 
-                      : "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80";
+                    const { hasAvatar, avatarUrl, firstLetter } = getAvatarData(user)
 
                     return (
                       <div 
                         key={user.id} 
-                        onClick={() => handleUserClick(user.id)}
+                        onClick={() => handleUserClick(user)}
                         className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-gray-50 cursor-pointer transition-colors active:scale-[0.99]"
                       >
-                        <div className="w-11 h-11 rounded-full bg-gray-200 overflow-hidden flex-shrink-0 border border-gray-100">
-                          <img 
-                            src={finalAvatar} 
-                            alt={user.userName} 
-                            className="w-full h-full object-cover"
-                            onError={(e) => {
-                              (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80";
-                            }}
-                          />
+                        <div className="w-11 h-11 rounded-full bg-gray-100 overflow-hidden flex-shrink-0 border border-gray-200 flex items-center justify-center text-[16px] font-bold text-[#262626] uppercase">
+                          {hasAvatar ? (
+                            <img 
+                              src={avatarUrl} 
+                              alt={user.userName} 
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).src = "";
+                              }}
+                            />
+                          ) : (
+                            <span>{firstLetter}</span>
+                          )}
                         </div>
                         <div className="flex flex-col truncate">
                           <span className="text-[14px] font-semibold text-[#262626] leading-tight truncate">
