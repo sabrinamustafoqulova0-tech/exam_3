@@ -1,9 +1,10 @@
 "use client"
 
-import React, { useState, useMemo } from "react"
+import React, { useState, useMemo, useEffect } from "react"
 import { useDispatch, useSelector } from "react-redux"
 import { RootState } from "@/app/store/store"
 import {
+  initializeNotifications,
   readNotification,
   readAllNotifications,
   clearNotifications,
@@ -21,6 +22,11 @@ import {
 export default function NotificationsPage() {
   const dispatch = useDispatch()
   const notifications = useSelector((state: RootState) => state.notifications.items)
+
+  // Initialize notifications from localStorage
+  useEffect(() => {
+    dispatch(initializeNotifications())
+  }, [dispatch])
 
   // Top pill filter state
   const [activeTab, setActiveTab] = useState<"all" | "following" | "comments">("all")

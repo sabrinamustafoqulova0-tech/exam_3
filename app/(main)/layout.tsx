@@ -11,4 +11,4 @@ export default function MainLayout({
       <div className="flex-1 h-screen overflow-hidden bg-white text-black">{children}</div>
     </div>
   );
-}
+}
