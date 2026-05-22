@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import "../../globals.css";
 import { useRegisterMutation } from "@/app/services/authApi";
-import { useRouter } from "next/navigation";
+import { useRouter } from 'next/navigation';  
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
 
