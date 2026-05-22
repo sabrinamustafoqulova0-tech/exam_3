@@ -1,4 +1,4 @@
-"use client";Ё
+"use client";
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -189,13 +189,13 @@ export default function Sidebar() {
             </span>
           </Link>
          <Link
-  href="/explore"
+  href="/expore"
   className={`flex items-center gap-4 p-3 rounded-xl hover:bg-[#f4f4f5] transition duration-200 ${
-    pathname === "/explore" ? "font-bold text-black bg-[#f4f4f5]" : "text-black"
+    pathname === "/expore" ? "font-bold text-black bg-[#f4f4f5]" : "text-black"
   }`}
 >
   <div className={`min-w-[28px] flex justify-center transition-transform duration-200 ${pathname === "/explore" ? "scale-105" : ""}`}>
-    {pathname === "/explore" ? <ExploreIcon sx={{ fontSize: 28 }} /> : <ExploreOutlinedIcon sx={{ fontSize: 28 }} />}
+    {pathname === "/expore" ? <ExploreIcon sx={{ fontSize: 28 }} /> : <ExploreOutlinedIcon sx={{ fontSize: 28 }} />}
   </div>
   <span className={`text-[15px] tracking-wide whitespace-nowrap ${openSearch ? "hidden" : "opacity-0 group-hover:opacity-100"}`}>
     Explore
