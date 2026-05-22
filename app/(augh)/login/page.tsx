@@ -17,13 +17,9 @@ const Login = () => {
 
   async function handleLogin(e: any) {
     e.preventDefault();
-<<<<<<< HEAD
 
     try {
      
-=======
-try {
->>>>>>> d7940752846932116b3599ce055539de74766e95
       const res = await login({
         userName,
         password,

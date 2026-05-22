@@ -113,7 +113,7 @@ export const profileApi = createApi({
     }),
    getPostById: builder.query({
   query: (id) => `/Post/get-post-by-id?id=${id}`,
-  providesTags: (result, error, id) => [{ type: 'Post', id }],
+    providesTags: (result, error, id) => [{ type: 'AllPosts', id }],
 }),
     addPost: builder.mutation<any, FormData>({
       query: (body) => ({
@@ -125,7 +125,7 @@ export const profileApi = createApi({
     }),
     deletePost: builder.mutation({
       query: (postId) => ({
-        url: `/Post/delete-post?postId=${postId}`,
+        url: `/Post/delete-post?id=${postId}`,
         method: "DELETE",
       }),
       invalidatesTags: ["AllPosts"],
