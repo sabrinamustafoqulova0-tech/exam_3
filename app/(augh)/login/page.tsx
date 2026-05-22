@@ -17,9 +17,13 @@ const Login = () => {
 
   async function handleLogin(e: any) {
     e.preventDefault();
+<<<<<<< HEAD
 
     try {
      
+=======
+try {
+>>>>>>> d7940752846932116b3599ce055539de74766e95
       const res = await login({
         userName,
         password,
@@ -34,6 +38,8 @@ const Login = () => {
       console.log(err);
     }
   }
+
+  
   return (
     <div className="min-h-screen bg-white flex items-center justify-center px-4">
       <div className="flex gap-[150px] justify-center items-center gap-8">
