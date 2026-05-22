@@ -35,6 +35,21 @@ const Login = () => {
       console.log(err);
     }
   }
+
+  const getErrorMessage = () => {
+    if (!error) return null;
+    if ("data" in error && typeof error.data === "object" && error.data !== null) {
+      const errorData = error.data as any;
+      if (errorData.errors && Array.isArray(errorData.errors) && errorData.errors.length > 0) {
+        return errorData.errors[0];
+      }
+      if (errorData.message) {
+        return errorData.message;
+      }
+    }
+    return "Ошибка при регистрации. Пожалуйста, попробуйте еще раз.";
+  };
+
   return (
     <div className="min-h-screen bg-white flex items-center justify-center px-4">
       <div className="flex gap-[150px] justify-center items-center gap-8">
@@ -131,7 +146,13 @@ const Login = () => {
               >
                 {isLoading ? "Loading..." : "Register"}
               </button>
-              {error && <p>Error</p>}
+              {error && (
+                <div className="mt-4 p-3 bg-red-50 border border-red-100 rounded-xl text-center">
+                  <p className="text-red-500 text-xs font-semibold">
+                    {getErrorMessage()}
+                  </p>
+                </div>
+              )}
             </form>
           </div>
 

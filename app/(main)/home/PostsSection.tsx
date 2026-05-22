@@ -13,6 +13,7 @@ import { Api, GetUserId } from "@/app/utils/token";
 import {
   useAddCommentMutation,
   useGetFollowingPostsQuery,
+  useGetPostsQuery,
   useLikePostMutation,
   useFavoritePostMutation,
   useGetUsersQuery,
@@ -183,7 +184,7 @@ const PostsSection = () => {
   // ✅ FAVORITES STATE (FIXED)
   const [favorites, setFavorites] = useState<number[]>([]);
 
-  const { data: posts = [], isLoading } = useGetFollowingPostsQuery(userID);
+  const { data: posts = [], isLoading } = useGetPostsQuery(undefined);
 
   // ✅ FAVORITE TOGGLE (FIXED)
   const toggleFavorite = async (postId: number) => {

@@ -17,7 +17,7 @@ const Login = () => {
 
   async function handleLogin(e: any) {
     e.preventDefault();
-try {
+    try {
       const res = await login({
         userName,
         password,
@@ -33,7 +33,20 @@ try {
     }
   }
 
-  
+  const getErrorMessage = () => {
+    if (!error) return null;
+    if ("data" in error && typeof error.data === "object" && error.data !== null) {
+      const errorData = error.data as any;
+      if (errorData.errors && Array.isArray(errorData.errors) && errorData.errors.length > 0) {
+        return errorData.errors[0];
+      }
+      if (errorData.message) {
+        return errorData.message;
+      }
+    }
+    return "Неверное имя пользователя или пароль";
+  };
+
   return (
     <div className="min-h-screen bg-white flex items-center justify-center px-4">
       <div className="flex gap-[150px] justify-center items-center gap-8">
@@ -105,7 +118,13 @@ try {
               >
                 {isLoading ? "Loading..." : "Login"}
               </button>
-              {error && <p>Login error</p>}
+              {error && (
+                <div className="mt-4 p-3 bg-red-50 border border-red-100 rounded-xl text-center">
+                  <p className="text-red-500 text-xs font-semibold">
+                    {getErrorMessage()}
+                  </p>
+                </div>
+              )}
             </form>
 
             <div className="flex items-center my-5">
