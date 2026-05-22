@@ -103,10 +103,11 @@ const { data: myProfile } = useGetMyProfileQuery(undefined);
               <div className="flex items-center gap-3">
                 <img
                   src={
-                    user.avatar
-                      ? `${Api}/images/${user.avatar}`
+                    user.avatar?.trim()
+                      ? `${Api}/images/${user.avatar.trim()}`
                       : "https://cdn-icons-png.flaticon.com/512/149/149071.png"
                   }
+                  onError={(e) => { (e.target as HTMLImageElement).src = "https://cdn-icons-png.flaticon.com/512/149/149071.png"; }}
                   className="w-10 h-10 rounded-full object-cover"
                 />
 

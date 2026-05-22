@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
-// Иконки для основного меню
+// Icons for the main menu
 import HomeIcon from "@mui/icons-material/Home";
 import HomeOutlinedIcon from "@mui/icons-material/HomeOutlined";
 import SearchIcon from "@mui/icons-material/Search";
@@ -20,9 +20,9 @@ import AddBoxOutlinedIcon from "@mui/icons-material/AddBoxOutlined";
 import CloseIcon from "@mui/icons-material/Close";
 import InstagramIcon from '@mui/icons-material/Instagram';
 import ExploreIcon from '@mui/icons-material/Explore';  
-import ExploreOutlinedIcon from "@mui/icons-material/ExploreOutlined"; // Не забудь добавить этот импорт в самый верх файла7
+import ExploreOutlinedIcon from "@mui/icons-material/ExploreOutlined";
 
-// Иконки для меню "More"
+// Icons for the More menu
 import MenuIcon from "@mui/icons-material/Menu";
 import MenuOutlinedIcon from "@mui/icons-material/MenuOutlined";
 import SettingsIcon from "@mui/icons-material/Settings";
@@ -47,7 +47,7 @@ export default function Sidebar() {
   const [debounced, setDebounced] = useState("");
   const [history, setHistory] = useState<any[]>([]);
 
-  // Закрытие "More" при клике вне модалки
+  // Close "More" when clicking outside the modal
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (modalRef.current && !modalRef.current.contains(event.target as Node)) {
@@ -73,7 +73,7 @@ export default function Sidebar() {
     setDebounced("");
   };
 
-  // Debounce для поиска
+  // Debounce for search
   useEffect(() => {
     const t = setTimeout(() => setDebounced(query), 400);
     return () => clearTimeout(t);
@@ -105,13 +105,13 @@ export default function Sidebar() {
     router.push(`/user/${user.id}`);
   };
 
-  // Если открыт поиск ИЛИ меню More, сайдбар НЕ должен расширяться по ховеру
+  // If search or More is open, sidebar should not expand on hover
   const isLocked = openSearch || openMore;
 
   return (
     <div className="relative flex h-screen bg-white text-black select-none font-sans antialiased">
       
-      {/* ===== ЛЕВЫЙ САЙДБАР ===== */}
+      {/* ===== LEFT SIDEBAR ===== */}
       <div
         className={`
           flex flex-col justify-between p-3 border-r border-[#e4e4e7] bg-white h-screen transition-all duration-300 z-30 relative
@@ -121,10 +121,10 @@ export default function Sidebar() {
           }
         `}
       >
-        {/* ВЕРХНЯЯ ЧАСТЬ МЕНЮ */}
+        {/* TOP MENU SECTION */}
         <div className="flex flex-col gap-1.5 pt-6">
           
-          {/* Логотип */}
+          {/* Logo */}
           <div className="px-3 mb-7 h-10 flex items-center relative overflow-hidden">
             {openSearch ? (
               <Link href="/home" className="text-black hover:scale-105 transition duration-200">
@@ -144,7 +144,7 @@ export default function Sidebar() {
             )}
           </div>
 
-          {/* Главная */}
+          {/* Home */}
           <Link
             href="/home"
             className={`flex items-center gap-4 p-3 rounded-xl hover:bg-[#f4f4f5] transition duration-200 group/link ${
@@ -159,7 +159,7 @@ export default function Sidebar() {
             </span>
           </Link>
 
-          {/* Поиск */}
+          {/* Search */}
           <button
             onClick={toggleSearch}
             className={`flex items-center gap-4 p-3 rounded-xl hover:bg-[#f4f4f5] transition duration-200 text-left ${
@@ -201,7 +201,7 @@ export default function Sidebar() {
     Explore
   </span>
 </Link>
-          {/* Сообщения */}
+          {/* Messages */}
           <Link
             href="/messages"
             className={`flex items-center gap-4 p-3 rounded-xl hover:bg-[#f4f4f5] transition duration-200 ${
@@ -216,7 +216,7 @@ export default function Sidebar() {
             </span>
           </Link>
 
-          {/* Уведомления */}
+          {/* Notifications */}
           <Link
             href="/notifications"
             className={`flex items-center gap-4 p-3 rounded-xl hover:bg-[#f4f4f5] transition duration-200 ${
@@ -231,7 +231,7 @@ export default function Sidebar() {
             </span>
           </Link>
 
-          {/* Создать */}
+          {/* Create */}
           <Link
             href="/create"
             className={`flex items-center gap-4 p-3 rounded-xl hover:bg-[#f4f4f5] transition duration-200 ${
@@ -242,11 +242,11 @@ export default function Sidebar() {
               {pathname === "/create" ? <AddBoxIcon sx={{ fontSize: 28 }} /> : <AddBoxOutlinedIcon sx={{ fontSize: 28 }} />}
             </div>
             <span className={`text-[15px] tracking-wide whitespace-nowrap ${openSearch ? "hidden" : "opacity-0 group-hover:opacity-100"}`}>
-              Создать
+              Create
             </span>
           </Link>
 
-          {/* Профиль */}
+          {/* Profile */}
           <Link
             href="/profile"
             className={`flex items-center gap-4 p-3 rounded-xl hover:bg-[#f4f4f5] transition duration-200 ${
@@ -268,7 +268,7 @@ export default function Sidebar() {
           </Link>
         </div>
 
-        {/* НИЖНЯЯ ЧАСТЬ МЕНЮ ("MORE / ЕЩЕ") */}
+        {/* LOWER MENU SECTION ("More") */}
         <div className="mb-2 relative">
           <button
             onClick={() => setOpenMore(!openMore)}
@@ -305,22 +305,22 @@ export default function Sidebar() {
             >
               <button className="w-full flex items-center gap-3.5 px-4 py-3.5 hover:bg-[#f4f4f5] transition text-left text-sm font-medium">
                 <SettingsIcon fontSize="small" />
-                <span>Настройки</span>
+                <span>Settings</span>
               </button>
 
               <button className="w-full flex items-center gap-3.5 px-4 py-3.5 hover:bg-[#f4f4f5] transition text-left text-sm font-medium">
                 <BoltOutlinedIcon fontSize="small" />
-                <span>Ваши действия</span>
+                <span>Your activity</span>
               </button>
 
               <button className="w-full flex items-center gap-3.5 px-4 py-3.5 hover:bg-[#f4f4f5] transition text-left text-sm font-medium">
                 <BookmarkBorderIcon fontSize="small" />
-                <span>Сохранено</span>
+                <span>Saved</span>
               </button>
 
               <button className="w-full flex items-center gap-3.5 px-4 py-3.5 hover:bg-[#f4f4f5] transition text-left text-sm font-medium">
                 <DarkModeOutlinedIcon fontSize="small" />
-                <span>Переключить тему</span>
+                <span>Toggle theme</span>
               </button>
 
               <button 
@@ -331,7 +331,7 @@ export default function Sidebar() {
                 className="w-full flex items-center gap-3.5 px-4 py-3.5 hover:bg-[#f4f4f5] transition text-left text-sm font-medium"
               >
                 <ReportProblemOutlinedIcon fontSize="small" />
-                <span>Сообщить о проблеме</span>
+                <span>Report a problem</span>
               </button>
               
               <div className="h-[1px] bg-gray-100 my-1.5" />
@@ -344,14 +344,14 @@ export default function Sidebar() {
                 className="w-full flex items-center gap-3.5 px-4 py-3.5 hover:bg-red-50 transition text-left text-sm font-semibold text-red-500"
               >
                 <LogoutOutlinedIcon fontSize="small" />
-                <span>Выйти</span>
+                <span>Log out</span>
               </button>
             </div>
           )}
         </div>
       </div>
 
-      {/* ===== ВЫЕЗЖАЮЩАЯ МОДАЛКА ПОИСКА ===== */}
+      {/* ===== SEARCH SLIDE-OUT MODAL ===== */}
       <div
         className={`
           fixed top-0 bottom-0 w-[396px] bg-white border-r border-[#e4e4e7] p-6 pt-8 z-20
@@ -361,7 +361,7 @@ export default function Sidebar() {
         `}
       >
         <div className="flex items-center justify-between mb-8">
-          <h2 className="text-2xl font-bold tracking-wide">Поиск</h2>
+          <h2 className="text-2xl font-bold tracking-wide">Search</h2>
           <button 
             onClick={closeSearch}
             className="p-1.5 rounded-full text-gray-400 hover:text-black hover:bg-[#f4f4f5] transition"
@@ -374,7 +374,7 @@ export default function Sidebar() {
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Поиск"
+            placeholder="Search"
             className="w-full p-2.5 px-4 bg-[#f4f4f5] text-black rounded-lg outline-none text-sm placeholder-gray-400 border border-transparent focus:bg-white focus:border-[#e4e4e7] transition"
           />
           {query && (
@@ -393,20 +393,20 @@ export default function Sidebar() {
           {query === "" ? (
             <>
               <div className="flex justify-between items-center mb-4 px-1">
-                <h3 className="font-bold text-sm text-black">Недавнее</h3>
+                  <h3 className="font-bold text-sm text-black">Recent</h3>
                 {history.length > 0 && (
                   <button
                     onClick={() => { setHistory([]); localStorage.removeItem("search_history"); }}
                     className="text-xs text-[#0095f6] font-semibold hover:text-[#00376b] transition"
                   >
-                    Очистить все
+                    Clear all
                   </button>
                 )}
               </div>
 
               {history.length === 0 ? (
                 <div className="text-center text-gray-400 text-sm mt-16 font-medium">
-                  Нет недавних запросов.
+                  No recent searches.
                 </div>
               ) : (
                 <div className="flex flex-col gap-1">
@@ -427,10 +427,10 @@ export default function Sidebar() {
             </>
           ) : (
             <>
-              <h3 className="font-bold mb-3 text-sm text-gray-400 px-1">Результаты</h3>
+              <h3 className="font-bold mb-3 text-sm text-gray-400 px-1">Results</h3>
               {filtered.length === 0 ? (
                 <div className="text-center text-gray-400 text-sm mt-16">
-                  Ничего не найдено
+                  Nothing found
                 </div>
               ) : (
                 <div className="flex flex-col gap-1">
@@ -464,17 +464,17 @@ export default function Sidebar() {
               ✕
             </button>
             <h2 className="text-xl font-bold mt-2 mb-4">
-              Оставить отзыв об Instagram
+              Leave feedback about Instagram
             </h2>
             <textarea 
-              placeholder="Что у вас случилось или что вы хотите предложить?" 
+              placeholder="What happened or what would you like to suggest?" 
               className="w-full h-32 p-3 bg-[#f4f4f5] border border-transparent rounded-xl outline-none text-sm resize-none focus:border-gray-300 focus:bg-white transition mb-4"
             />
             <button 
               onClick={() => setOpenReport(false)}
               className="w-full py-2.5 bg-[#0095f6] hover:bg-[#1877f2] text-white rounded-xl font-semibold text-sm transition"
             >
-              Отправить отзыв
+              Send feedback
             </button>
           </div>
         </div>
