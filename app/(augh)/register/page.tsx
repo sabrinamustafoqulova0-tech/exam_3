@@ -130,7 +130,7 @@ const Login = () => {
               >
                 {isLoading ? "Loading..." : "Register"}
               </button>
-              {error && <p>Error</p>}
+              {error && <p>Such a user already exists, please try using a different name.</p>}
             </form>
           </div>
 

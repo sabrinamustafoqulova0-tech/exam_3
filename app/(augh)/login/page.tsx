@@ -106,7 +106,7 @@ const Login = () => {
               >
                 {isLoading ? "Loading..." : "Login"}
               </button>
-              {error && <p>Login error</p>}
+              {error && <p>You entered an incorrect password or username, or the account was not created. This account does not exist.</p>}
             </form>
 
             <div className="flex items-center my-5">
