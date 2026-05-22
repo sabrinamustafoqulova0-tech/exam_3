@@ -9,14 +9,20 @@ import SendIcon from "@mui/icons-material/Send";
 import CloseIcon from "@mui/icons-material/Close";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
-import { useGetStoriesQuery, useLikeStoryMutation } from "@/app/services/home.store";
+import {
+  useAddStoryViewMutation,
+  useGetStoriesQuery,
+  useLikeStoryMutation,
+} from "@/app/services/home.store";
 
 const STORY_DURATION = 5000;
 
 const StoriesSection = () => {
   const [likeStory] = useLikeStoryMutation();
+  const [addStoryView] = useAddStoryViewMutation();
 
   const [showStories, setShowStories] = useState(false);
+  const [viewCounts, setViewCounts] = useState<Record<number, number>>({});
 
   const [activeUserIndex, setActiveUserIndex] = useState(0);
   const [activeStoryIndex, setActiveStoryIndex] = useState(0);
@@ -24,19 +30,14 @@ const StoriesSection = () => {
   const [replyText, setReplyText] = useState("");
 
   // likes per story
-  const [likedStories, setLikedStories] = useState<
-    Record<number, boolean>
-  >({});
+  const [likedStories, setLikedStories] = useState<Record<number, boolean>>({});
 
-  const { data: stories = [], isLoading } =
-    useGetStoriesQuery({});
+  const { data: stories = [], isLoading, refetch } = useGetStoriesQuery({});
 
   // GROUP USERS
   const groupedUsers = useMemo(() => {
     return stories.reduce((acc: any[], story: any) => {
-      const existing = acc.find(
-        (u) => u.userId === story.userId
-      );
+      const existing = acc.find((u) => u.userId === story.userId);
 
       if (!existing) {
         acc.push({
@@ -56,28 +57,18 @@ const StoriesSection = () => {
   const activeUser = groupedUsers[activeUserIndex];
 
   const activeStories =
-    activeUser?.stories?.filter(
-      (s: any) => s.fileName
-    ) ?? [];
+    activeUser?.stories?.filter((s: any) => s.fileName) ?? [];
 
-  const activeStory =
-    activeStories?.[activeStoryIndex];
+  const activeStory = activeStories?.[activeStoryIndex];
 
   // like state
-  const isLiked =
-    likedStories[activeStory?.id] ?? false;
+  const isLiked = likedStories[activeStory?.id] ?? false;
 
   // NEXT
   const goNext = () => {
-    if (
-      activeStoryIndex <
-      activeStories.length - 1
-    ) {
+    if (activeStoryIndex < activeStories.length - 1) {
       setActiveStoryIndex((prev) => prev + 1);
-    } else if (
-      activeUserIndex <
-      groupedUsers.length - 1
-    ) {
+    } else if (activeUserIndex < groupedUsers.length - 1) {
       setActiveUserIndex((prev) => prev + 1);
       setActiveStoryIndex(0);
     } else {
@@ -90,14 +81,11 @@ const StoriesSection = () => {
     if (activeStoryIndex > 0) {
       setActiveStoryIndex((prev) => prev - 1);
     } else if (activeUserIndex > 0) {
-      const prevUser =
-        groupedUsers[activeUserIndex - 1];
+      const prevUser = groupedUsers[activeUserIndex - 1];
 
       setActiveUserIndex((prev) => prev - 1);
 
-      setActiveStoryIndex(
-        prevUser.stories.length - 1
-      );
+      setActiveStoryIndex(prevUser.stories.length - 1);
     }
   };
 
@@ -109,21 +97,30 @@ const StoriesSection = () => {
       goNext();
     }, STORY_DURATION);
 
+    if (!showStories || !activeStory?.id) return;
+
+    addStoryView(activeStory.id)
+      .then(() => {
+        setViewCounts((prev) => ({
+          ...prev,
+          [activeStory.id]: (prev[activeStory.id] ?? 0) + 1,
+        }));
+      })
+      .catch(() => {});
     return () => clearTimeout(timer);
   }, [
     showStories,
     activeStoryIndex,
     activeUserIndex,
+    showStories,
+    activeStory?.id,
   ]);
 
   if (isLoading) {
     return (
       <div className="flex gap-4 px-4 py-4 overflow-x-auto select-none bg-white border-b border-gray-100">
         {[...Array(6)].map((_, i) => (
-          <div
-            key={i}
-            className="flex flex-col items-center animate-pulse"
-          >
+          <div key={i} className="flex flex-col items-center animate-pulse">
             <div className="w-[72px] h-[72px] rounded-full bg-gray-200" />
             <div className="w-14 h-2 bg-gray-200 rounded-full mt-2" />
           </div>
@@ -200,7 +197,6 @@ const StoriesSection = () => {
 
           {/* MAIN CONTAINER FOR INTERFACE (CARD + ARROWS) */}
           <div className="relative flex items-center justify-center w-full max-w-[540px] h-full md:h-[92vh] md:max-h-[840px]">
-            
             {/* LEFT NAVIGATION BUTTON (Visible on MD screens and up) */}
             <button
               onClick={goPrev}
@@ -211,7 +207,6 @@ const StoriesSection = () => {
 
             {/* CARD */}
             <div className="relative w-full h-full md:w-[420px] rounded-xl overflow-hidden bg-black md:shadow-[0_0_40px_rgba(0,0,0,0.6)] flex flex-col justify-between">
-              
               {/* IMAGE */}
               <div className="absolute inset-0 z-0 flex items-center justify-center bg-black">
                 <img
@@ -225,24 +220,22 @@ const StoriesSection = () => {
               <div className="absolute top-0 left-0 right-0 z-30 px-[11px] pt-3 pb-8 bg-gradient-to-b from-black/80 via-black/40 to-transparent">
                 {/* progress */}
                 <div className="flex gap-[3px] mb-3">
-                  {activeStories.map(
-                    (_: any, i: number) => (
+                  {activeStories.map((_: any, i: number) => (
+                    <div
+                      key={i}
+                      className="flex-1 h-[2px] bg-white/30 rounded-full overflow-hidden"
+                    >
                       <div
-                        key={i}
-                        className="flex-1 h-[2px] bg-white/30 rounded-full overflow-hidden"
-                      >
-                        <div
-                          className={`h-full bg-white rounded-full ${
-                            i < activeStoryIndex
-                              ? "w-full"
-                              : i === activeStoryIndex
+                        className={`h-full bg-white rounded-full ${
+                          i < activeStoryIndex
+                            ? "w-full"
+                            : i === activeStoryIndex
                               ? "animate-[progress_5s_linear_forwards]"
                               : "w-0"
-                          }`}
-                        />
-                      </div>
-                    )
-                  )}
+                        }`}
+                      />
+                    </div>
+                  ))}
                 </div>
 
                 {/* user row */}
@@ -264,12 +257,15 @@ const StoriesSection = () => {
                       <p className="text-white text-[14px] font-semibold tracking-wide hover:underline cursor-pointer">
                         {activeUser.userName}
                       </p>
-                      <span className="text-white/60 text-[13px] font-light">•</span>
+                      <span className="text-white/60 text-[13px] font-light">
+                        •
+                      </span>
                       <p className="text-white/60 text-[13px] font-normal">
                         {activeStory.createAt
-                          ? new Date(
-                              activeStory.createAt
-                            ).toLocaleDateString([], { month: 'short', day: 'numeric' })
+                          ? new Date(activeStory.createAt).toLocaleDateString(
+                              [],
+                              { month: "short", day: "numeric" },
+                            )
                           : "now"}
                       </p>
                     </div>
@@ -277,9 +273,7 @@ const StoriesSection = () => {
 
                   {/* CLOSE */}
                   <button
-                    onClick={() =>
-                      setShowStories(false)
-                    }
+                    onClick={() => setShowStories(false)}
                     className="w-8 h-8 flex items-center justify-center rounded-full text-white/80 hover:text-white transition-colors duration-200"
                   >
                     <CloseIcon className="text-[26px]" />
@@ -302,9 +296,7 @@ const StoriesSection = () => {
                 <div className="flex-1 relative flex items-center">
                   <input
                     value={replyText}
-                    onChange={(e) =>
-                      setReplyText(e.target.value)
-                    }
+                    onChange={(e) => setReplyText(e.target.value)}
                     placeholder={`Ответьте пользователю ${activeUser.userName}...`}
                     className="w-full bg-transparent border border-white/40 rounded-full pl-4 pr-10 py-[10px] text-white text-[14px] outline-none transition-all duration-200 placeholder:text-white/50 focus:border-white/70"
                   />
@@ -312,19 +304,22 @@ const StoriesSection = () => {
 
                 {/* ACTIONS */}
                 <div className="flex items-center gap-4">
+                  {/* 👁 VIEW COUNT - временно без проверки */}
+                  {viewCounts[activeStory?.id] > 0 && (
+                    <span className="text-white/60 text-[12px] flex items-center gap-1">
+                      👁 {viewCounts[activeStory.id]}
+                    </span>
+                  )}
                   {/* LIKE */}
                   <button
                     className="text-white hover:scale-105 active:scale-90 transition-transform duration-150 outline-none"
                     onClick={async () => {
                       try {
-                        await likeStory(
-                          activeStory.id
-                        ).unwrap();
+                        await likeStory(activeStory.id).unwrap();
 
                         setLikedStories((prev) => ({
                           ...prev,
-                          [activeStory.id]:
-                            !prev[activeStory.id],
+                          [activeStory.id]: !prev[activeStory.id],
                         }));
                       } catch (err) {
                         console.log(err);
@@ -353,7 +348,6 @@ const StoriesSection = () => {
             >
               <ChevronRightIcon className="text-[32px]" />
             </button>
-
           </div>
         </div>
       )}

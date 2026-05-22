@@ -7,12 +7,14 @@ import {
   useFollowUserMutation,
   useGetSubscriptionsQuery,
   useGetUsersQuery,
+  useGetMyProfileQuery,
 } from "@/app/services/publication.home";
 import Link from "next/link";
 
 const RightSidebar = () => {
-  const userID = GetUserId();
-  const { data, isLoading } = useGetUsersQuery();
+  const userID:any = GetUserId();
+  const { data, isLoading } = useGetUsersQuery(undefined);
+const { data: myProfile } = useGetMyProfileQuery(undefined);
   const { data: dataP, isLoading: isLoadingP } =
     useGetSubscriptionsQuery(userID);
   const [followUser] = useFollowUserMutation();
@@ -28,8 +30,8 @@ const RightSidebar = () => {
 
   const users = data?.data ?? [];
 
-  const isFollowing = (userId) => {
-    return dataP?.data?.find((e) => e.userShortInfo.userId == userId)
+  const isFollowing = (userId:any) => {
+    return dataP?.data?.find((e:any) => e.userShortInfo.userId == userId)
       ? true
       : false;
   };
@@ -42,10 +44,51 @@ const RightSidebar = () => {
   }
 
   return (
-    <div className="w-[250px] mt-[50px] flex flex-col gap-5">
+    <div className="w-[340px] mt-[50px] flex flex-col gap-5">
       <div className="flex flex-col gap-4">
-        {/* HEADER */}
+        {/* HEADER */}<div className="flex items-center justify-between mb-2">
+
+  <div className="flex items-center gap-3">
+
+    <img
+      src={
+        myProfile?.data?.image
+          ? `${Api}/images/${myProfile.data.image}`
+          : "https://cdn-icons-png.flaticon.com/512/149/149071.png"
+      }
+      className="w-[56px] h-[56px] rounded-full object-cover"
+      alt=""
+    />
+
+    <div className="flex flex-col">
+
+      <span className="text-[14px] font-semibold leading-[16px]">
+        {myProfile?.data?.userName || "username"}
+      </span>
+
+      <span className="text-[14px] text-gray-400 leading-[16px]">
+        {myProfile?.data?.fullName || "User"}
+      </span>
+
+    </div>
+
+  </div>
+
+  <button
+    className="
+      text-[#0095f6]
+      text-[12px]
+      font-semibold
+      hover:text-[#00376b]
+      transition
+    "
+  >
+    Switch
+  </button>
+
+</div>
         <div className="flex justify-between">
+          
           <p>Recommendations</p>
 
           <Link href="/users">
@@ -77,8 +120,8 @@ const RightSidebar = () => {
 
               <button
                 onClick={() => toggleFollow(user.id)}
-                className={`text-xs font-semibold cursor-pointer hover:opacity-70 ${
-                  isFollowing(user.id) ? "text-black" : "text-[#0095f6]"
+                className={`text-xs font-semibold px-[10px] rounded-[10px] py-[5px] cursor-pointer hover:opacity-70 ${
+                  isFollowing(user.id) ? "text-[#000000c2] border-2 border-[#000000c2]" : "text-[#381dffd8]"
                 }`}
               >
                 {isFollowing(user.id) ? "Followed" : "Follow"}

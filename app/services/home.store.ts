@@ -63,18 +63,19 @@ likeStory: builder.mutation({
   }),
 }),
 
-addStory: builder.mutation({
-  query: (formData) => ({
-    url: `/Story/AddStories`,
+addStoryView: builder.mutation({
+  query: (storyId: number) => ({
+    url: `/Story/add-story-view?StoryId=${storyId}`,
     method: "POST",
-    data: formData,
   }),
 }),
+
 
   }),
 });
 
 export const {
   useGetStoriesQuery,
+  useAddStoryViewMutation,
   useLikeStoryMutation
 } = storyApi;

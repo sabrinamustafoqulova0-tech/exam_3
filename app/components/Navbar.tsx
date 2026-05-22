@@ -17,6 +17,7 @@ import SmartDisplayOutlinedIcon from "@mui/icons-material/SmartDisplayOutlined";
 
 import ChatIcon from "@mui/icons-material/Chat";
 import ChatOutlinedIcon from "@mui/icons-material/ChatOutlined";
+import LogoutOutlinedIcon from "@mui/icons-material/LogoutOutlined";
 
 import FavoriteIcon from "@mui/icons-material/Favorite";
 import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
@@ -27,7 +28,36 @@ import AddBoxOutlinedIcon from "@mui/icons-material/AddBoxOutlined";
 import MenuIcon from "@mui/icons-material/Menu";
 import MenuOutlinedIcon from "@mui/icons-material/MenuOutlined";
 
+import SettingsIcon from "@mui/icons-material/Settings";
+import BoltOutlinedIcon from "@mui/icons-material/BoltOutlined";
+import BookmarkBorderIcon from "@mui/icons-material/BookmarkBorder";
+import DarkModeOutlinedIcon from "@mui/icons-material/DarkModeOutlined";
+import ReportProblemOutlinedIcon from "@mui/icons-material/ReportProblemOutlined";
+
+import { useEffect, useRef, useState } from "react";
+
 export default function Sidebar() {
+  const [openMore, setOpenMore] = useState(false);
+  const [openReport, setOpenReport] = useState(false);
+
+  const modalRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        modalRef.current &&
+        !modalRef.current.contains(event.target as Node)
+      ) {
+        setOpenMore(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
   const pathname = usePathname();
   return (
     <div
@@ -52,7 +82,7 @@ export default function Sidebar() {
         />
         <div className="h-[40px] mt-[20px] group-hover:hidden text-2xl font-bold">
           <img
-            className="h-[30px]  group-hover:hidden text-2xl font-bold"
+            className="h-[30px] rounded-[10px] group-hover:hidden text-2xl font-bold"
             src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wCEAAkGBwgHBgkIBwgKCgkLDRYPDQwMDRsUFRAWIB0iIiAdHx8kKDQsJCYxJx8fLT0tMTU3Ojo6Iys/RD84QzQ5OjcBCgoKDQwNGg8PGjclHyU3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3N//AABEIAJQAlAMBEQACEQEDEQH/xAAcAAAABwEBAAAAAAAAAAAAAAAAAQIEBQYHAwj/xABHEAABAwICBAgLBQYFBQAAAAABAAIDBAUGEQcSITETQVFhcYGRwSIyNlJUdJOhsbLRFBcjQtIkU2JkcrMVgqLC4SUzRJKj/8QAGwEAAQUBAQAAAAAAAAAAAAAAAwACBAUGAQf/xAA7EQABAwICBQgIBgMBAQAAAAABAAIDBBEFEiExQZHRBhMiUWFxobEyNEJScoHB8BQVFiNT4SRDYvEz/9oADAMBAAIRAxEAPwDcCckklGX6/wBusNJ9ouM+oDsYxoze88gHGpNLSTVT8sQ4BPjjdIbNWV3zSdd6xzmWpjbfDnsdkHyEdJGQ6h1rVU3J+CMXlOY7grCOkY30tKq9TfLtVucam51khO/OZ2XZnkrNlJBH6LAPkpbIWDU0Jpwkjj4cj3dLiUWwGxSWtRjNNKO1qUAmEozWpYCYSjBqUAmEozWpYCZdGa1KATCUcNSwEMlFa1KTUSyMPe3xXOHQVwgLhaCu8ddVxHOOrnYf4ZCO9MMTDrCG6nidraD8gpShxdfKFzeDr5JGD8k3hg9u33qPJQ07/Zt3KFNg9HLrYB3aFd8O4+pK+RtPc2NpJjsbJnnG4/7evtVTU4c+MZmaQs3X4BLAC+E5h1bf7V0a4HLJVqz6UkkovEd5p7FaZq+pzcGbGMG97juaFJpKZ9TKI2/YRIonSvDGrArzc6u83CStr5C+V+4flY3ia0cQC3tLTx00YjjFgFfshDG5QmWqj5kQRpQamlyK2NKDUwuRmxpYahlyK1iWGphcjNYlBqYXIzWJYCYSjNYlAJhcjNalgJhKKG2RricgkkiXLrqBTS5JEm5kkeaaXJWV/wBHmKXsmjtFfIXMdsppHb2nzSeTk7FUV1MD+6z58VlcdwsFpqYhpGsfXitJB51UrIrH9K91dWXxluYTwVE3whnsMjgCewZe9azA4BHAZTrd5LQYZT2i5zrVI1Vd5lac2j1U3MniNLDE0uTxGpiy4Yu168KipHcF++k8Fnad/VmodRXQ0/pnT1bUGeqgp/8A6HT1bVcKDRbI5gdX3NjXZbWwR5gdZy+CqZMc9xm9Vr8cA9Bm9STNF9rHj11a7oLB3KMcan2NHjxQjjs2xo8eK6/dlZvS7h7Rn6E385n6h48Uhj9SPZb48UPuzs3pVw9oz9C5+bz9Q8eKcOUNUPZbuPFH92ln9Kr/AGjP0Ln5tP1Dx4p36kq/dbuPFH92tn9Kr/aM/Qufm0/UPHil+pKr3W7jxRHRraOKrrut7P0pfm03UPHiujlJVe63x4pvNoyoyPwLjO3+tjXfDJOGLSX0tCIzlLKD0ox4/wBqBuejy7UjS+lfDVtA3NJa/sOz3qQzE4nekLKyp+UVLIbSAt8R4cFU54JqaV0VRE+KRu9kjS0jqKmiQOFwdCvmSMkbmYbjsXJczJ6CbmXUbXFjg5ri1zTmHA5EFcJB1rjm3Fit2wxc/wDF7HS1p8d7cpByOByPvCzs0fNvLV5nX034WpdFsGruOlYhf5TVXy4TuIOvUyHMcmscvctrSjJAxvYFq6WHLCwdiYaqNmUkRJQbmuZkQRq+4EwWyuYy53aMmmzzhhOzhP4nfw/Ho30eI4kWExRHTtKocUxLmiYYTp2nq7AtQaxkbA2NoYxoyDWjIAdCzxJJuVmiSdJURcMVWW3Ocyor4i9u9kfhkdikR0c8notU6DC6ucXYw27dCi5dIljZ4oqpP6YvqQpAwuoPUpreT1Yddh81y+8qzcdLX+zZ+tO/KZ+sePBE/TdX7zd54IfeVZvRq/2bP1pflM/WPHgl+m6v3m7zwQ+8qzejV/s2frS/Kp+sePBL9N1fvN3ngh95Vm9Gr/Zs/Wuflc3WPHgu/pur95u88EbdJNmcdsFc3ndG3ucmnDZhtH38k08nKsai0/M8E7gx7YJnAGqkiz/eRED3ITqGYbEB+A1zBfLfuKnaGvpLhHwtHUxTs4zG4HL6KM5jmGzgqyaCWF2WRpB7UwxHh6hvtNwdQzVmaPw52jwmHvHMiQzvhN2qTQ4hLRvzMOjaOtYzebbU2ivlo6tuUjDsI3PHE4cyuo5hI3MF6FSVUdVEJI9R8OxMc066lWQzXMyS0HAN6FDZZIJJMsqhxA5iGqtqm3fdZXGqLnagPA2fUqhVHhzyO855PvWpabNAV1HHZoCRqruZEEamMK2j/GL5TUjh+Fnry/0Dae3d1qJWVPMQlw17O9RMRqPwlM6TbqHeVuUbWxxtYxoa1oyAG4BZIkk3K88JJNysrxri6avqJKC3Sujo2Etc9pyMp49vm/FX9DQhjRI8afJbXCMIZEwTTC7z4f2qarRaEIJJIJJIJLqJNJSRFDJSQQyV1SFrsdzu2sbdRyTNb4zgQ1o6zkFHlnZH6ZsolTX01NbnnWv96glujvGGK9j3smo6gbWnPY8dWxwQi6KdvWmB1JiMRAs5vl9QtZwhiGK/24y6oZURkNmjHEeUcxVRPCYnWWGxPD3UU2XW06iovSXZ211lNbG0cPR+HnltMf5h39SJSy5H22FTeT9YYanmj6L9Hz2cFkassy3g0okrrqk7ZKWQOA8/uCBJpKh1DLuTR21xPOr+6M0WCSm5k5aHompGumuFY4Aua1sTTzHafgFT4tJfKwd6ynKWU2ji7yrZjCtNuw7XTsdqv4PUYed2zvVbSszzNCosLgE9Yxh1XvuWILUZ16RZBLOkgu50kbc3ODQCSTkAONLOALlcJAFypqjwnfq1gfBbZQ08chDPmIUV9dA3QXKukxaiiNnSD5afJOpsCYijGbaNknMyZmztKD+YQHagtx6hdrfb5FQdwttdbXBtfSSwE7i9pAPQdxRWzMf6JurKCphnF43ApokSjrdsLwU0GHqBlKG8FwLXAjjJGZPbms7M4mQ5l5niL3vqpDJruVEaS4oH4WnklDeEjkYYid4cXAHLqJRKUkS6FO5PueK5obqIN93FUnRpXGlxKyFzvAqo3RkcpG0fD3qXVi7L9S0nKGnElGX7Wm/0K12qgZU0ksEgDmSxljgeMEZKtBsVhI3mN4eNY0rzxPGYZpIjvY4tPUclah9xderRuzNDhtXPNLMiJ1TP1YyOdMcdKBI25XMq4Micgmc4ktS0St/6LWP5anLsa36qmxB15B3LFcpT/ksH/P1KdaUZNTDOr+8qGN+J7kOi0S3QeTrb1t+oFZHmrjnFu0M0ucSUhYrPVXuubS0bdu98jvFjbylDkqGxi5USsrIqSLnJPkNpWu4ewvb7JE10MYkqcvCqHjwj0cg6FUTVMkp0nQsHW4nPWHpGzeoav7U2HBR1WoNlY7PVcHZchzSTiCNaRUQxVUToZ42SRuGTmPbmD1LoJBuF1j3MdmabFZvjLAopo5K+ytJjbtkphtLRxlvL0KxgrCei9a3CsdzkQ1J07Dx4qBw9jC42GH7NFwc9NvbFIPEO/YRy5os1O2Q5tqtK3BqetdndcO6xt701xFia4X+Rv2t7WwsObIYxk0Hl5yuRxNj1I1BhcFECYxpO0pGEZeCxPa3ctSxvacu9Nm0sKJijc1FKP+T4aVvHFsVWvMl59xA0R325MG5tXKP9ZU9juiF6nQnNSxn/AJHkEwXcylWXWJ2TetNJTHDSjzViZFxFmhmRdstX0S+T1T6475GKtqjd47lh+U3rbfhHmUNLXk7Teut+R65TOs9LkyP8t3wnzCyfNTudW4sgM3EBozJ2AAb1znVw2AuVuGELHHY7THC5o+0yDXnfyu5OgblXyyGR115vilc6sqC72RoHd/ab4xxVFh2ARxBstbKM4oidjR5zub4pRx5z2ImFYW+ucSdDBrP0Cye63u5XaQvr6uSQH8meTB0NGxT2BjPRC3VLQ09KLRNt27d6YxvfFI2SNzmPac2uaciOtPz3UpzWuBBF1ccL48rLfMyC7SvqaMkAyO2yR8/OOZRpYWu0t1rPYhgEUzS+AZXdWw8Fq0MsU8LJYXtex7dZrmnMEHjUIi2tYhzHNJa4WIWQ6RbC20XZtRTM1aWrzc1oGxjx4w7+1WFPMXNsVvcBrzUwFjz0m+I2Koo5KvlJYa8o7V67D84QJT0ComIeqS/C7yK37iVcvLl5/wAS+Ud19cm+cqW09EL1LDvU4vhb5BRq5mU1G07ErppCWpBkTUEIyJLWNEnk9VH+cd8jFGkNysNym9bb8I8yhpb8naX11vyPTWuym67yZ9bd8J8wsmROdW5U3gmkbW4qt0MgzZwhkOzzWl3cuOkuLKsxiUxUUjhrtbebfVbm4bEJearAsQXJ93vNXWvcSJHng+Zg2NHYjseALL1GhpRS07YhsGnv2qORBIpiGa7ziSGafmXLLVtFNydVWmehkcSaN41M+Jjs8h2gqLKNN1h+UlKIqhsrfa8x9hPtJtI2owrNKR4dPIyRuzlcGn3OShNnqPyflLK5rdjgR4X+ixpTcy9BCkMN+UVq9dh+cIcp6BUTEPVJfhd5L0CoK8uXn/FHlLdfXJfnKkD0V6lhvqcXwjyUUmkqajC4kuiaZExBCMiS1jRF5O1XrrvkYk12ZYblP62z4R5lDS55O0nrrf7ciZK7KAlyY9bf8J8wsnyQudW5Vl0cycFjGhDsspGyNH/oT3JzJLuAVNj7c2Hvtst5raJRrMLc8sxkpC89Bsbrzm9jonuikGq+MlrhyEbCgiRetNcHAOGook8SJyCIHriJPD0lo2h+J+vdJyDqfhMB4ifCJ7NnauPN1keVLx+03bpPkrTpAlEWELiTxsa0db2jvXGekFS4K0ur4/n4ArD1KuvSVI4c8orV65D84XHnoqHiHqkvwu8ivQKiLy5ef8UeUt19cl+YqS0dFepYb6nF8I8lF5LllNQySskuoBPEqt0qZdKEZQDMmly1bRKMrBVjkrXf241KpXZmnvWI5Tets+H6uR6WBnYaIfzzf7ciZWuysB7eK5yaNqp/wnzasv4LmVbzy2mZOLbUPt1xpq2Npc6nlEmqN5y3jrGac2fKQUGojE8Toj7Qst4pp46qCOaFwdHI0PY4cYKu2uDhcLzF7HMcWO1hZVpFw5JQXKS5wNLqSpdm8gf9uTjz5jv6c+ZQ6gFhzDUtrgOIiWIQP9JurtH9KmOYUISrRhySQQjNkTrpdNTzVdRHTU0bpZ5DqsjaNrijNemSysiYXvNgNZW54TsjbDZoaTMOlPhzOHG87+obupGC81xKtNbUGXZqHcqtpZuzWUlLaoz4cruFlAO5o3dp+CcNauuTNKXSOqCNA0D56/vtWYooctopDDflFavXYfnC649FQ8Q9Ul+F3kV6BUdeXLz9iY54kup/nJfnKmMHRXqWHaKOL4W+SjU7KpiUAllXCnbYlknyqOXrq2JR3SphetN0WDVs1a3+cJ/+bPorfDnZoj3rG8ozepYf+fqV20mx8JYoD5lU13+lw703FCRDft4ofJ91qp3a0+YWacEqDnCtjmQ4IJc4UsyueA8RCiAtdfJlCSeAlduYSfFPNnu7FbYfWgftP+SzmM4cZf8AIiGnaOvt4rQZYo54XRTMbIx7S1zXDMOHOFdkAiyyzXFpzNNiFTbpo6t9S5z7fPLRudt1NXhGA9BOY7VDfRtJu02WgpuUU8YAlbm8D9/JR0Oi9+v+0XYFme0R02RPWXH4LjaUjW773qW7lRo6EWntP9K3WDDNssLXfY4PxXDJ00h1nu6+IcwUpkYaqKtxKorT+6dHUNS64gvlJYqB9VVv5o42nwpHcgTnODdaHRUUtZLzcfzPUsOu1xqLtcZq6rdnLKdw3NHEBzAJjXL0mkpmU0QiZqH3dNEVrlJUlhppdiS0gb/tkR7HgohOhQ8RNqOW/unyW/cSEvLl5/xHtxDdCPTJvnKmR6gvUsP9Ui+FvkFHIwClpbG5hdITSVKtjXnj5FCLl1DOZCLkMuWg6M3gUldFxiUP7Rl3K+wh143DtWV5QD9xjuz781JY8hM2HpSBnwb2P9+Xej4m0mmdZQ8Gfkqx2ghZmIjyLLZlsi5KEPMm503OjMPMlnsuZ1YLLiautjGwy/tNO3YGPOTmjmP1VlTYrJF0XaQqqrwuGo6Y6LvvYrVTYxtMrfxnSwO818ZPvGat2YrTOFybKlkwepaeiAe48bLtJiyyRtzNbnzNjee5FOI0o9vzQ24VWO9jxHFQN3x8xrdS1UjpH/vJzqhv+Xefco78TZqYFZ02AOJvO63YNPj/AOrO7tVVlzqnVVfO+aU7M3bmjkA3AIbKguN3Faulhhp2ZIhYfetRrmkHcpjJAVOBSVIa5dU9gWB0+LLaGjPUkLz0AEo19CqsakyUMh6xZbkfF2ri83Xni6S8Pc6yX95O93a4qazUF6tTNyQsb1ADwTZHajLvA3Nh6U8hDedKmgzavMXnSVXZl0axMJTC5WbAlSKW7uhccm1Eer/mG0d6tMJmyzlh2hUuNRc5AHj2T4K+1tMyspJqeQHUlYWnrWikjEjCw7VmIZDE8PGsLLqmhlo6mSnnaQ9hy6edYieN8Lyx2sLaxVDZWB7dRSREo+ZPzoxEuZk3OgYksy7nSTCnBy6Hrm+FODk8OXCSFFbIUQPTSWBS45kdr0xng37FYRTKSx6ZPj1CrKOTMpAddaJopskjTNeaiMhrm8FT58Y/M4dgHapjNOlZHlLXA5aZp7T9Arpii4i14frarWAe2Itjz43nY33p4Fys/h1P+IqmR7L6e4a1gqmNXp4QR2pJ7Rs1oif4k9yjymzlPzQ8HUysP5JHN7CvMJui9w7SquN+ZgPYjaxALkiV3g145WSRnVewhzXchG4pMkLHBzdYQpLOaWnUVpdmucdyo2yDJsoGUjPNP0WzoqtlTHmGvb3rHVdM6nky7NiTd7NT3OMcJ4MrfFkaNo5jyhcrKGOqbZ2g9a7TVclOejq6lWajDNdC4mNrJm8rHZHsKzc2CVTPQs4K5jxSFw06E2dZq9u+jm6m5qI7Dqsf6yjCtgPtBINrrR/4VR7J30Q/wdUP9btxT/xUPvjeEk2ut9CqfYu+iX4Sp/jduK7+Kh98bwkOtVd6FU+xd9E4UlT/ABu3FOFVD743hcX2muO6hqvYu+ieKWp/jduKeKuH3xvC4vslxf4tBUnpiIRmUlSfYO5EFdANbxvSBhW8TuybQPbnxvIaPip8VHU7Wp35tSsGl6lrRo7BmZNeZ2uaDn9nhJIdzOd3DtVvT0jm6XlV9Vyi6JbTD5n6BX5jGU8QZG1rY2jINAyDQFPA6lmHOLiSdZWS6RcSsu1Y230bg6kpnkueDskk3ZjmGeXWutOlbnAMNdTMM0g6TtnUP7VOUphWiRqQxcVjw5a5q2hfJG3MCUt9w+q5K+xVTX1TYZA09XFT2IqT7Le6pmWTXP1284dt+Oa87xNnN1Lh16VVUEwkp2nstuTNjFWkqSXLsyPmTC5MLk9oZ5qOcTU7y147COQolPVSU7w9h0qLNGyVuVw0K2UGIKecBtTnDJx57WnoK1FLjlPKLSdE+Co58PkYbs0hS8UsUrQY3seDxtOauGSMeLsN1Ac0t0EJexPXENiSSGxJJDIciSSGxJJDYkkgcgMzkkko64Xy229p+0VcYcBnqNOs7sCBJUwx+k7ipUFFUT+g09+xZ3izGNXc4nUlCH0tI7MPJP4kg5CRuHMP+FENZzhs3QFq8MwaOnIklOZ3gOJ+7KjvbkpkT7rSgpKnMKcjClsXCtg0c2xsOGIZJmEOqJHS5Hk3D3AFRKh936Fgcdqi+tLWn0QB9fqneLrWaqnbVxN1pYRk4DeW/wDH1WexikM0XON1t8lHwuq5t5jdqPmqixqyBKvyV3YxDJQy5dmsQyUMuXVrOZNumEpTQW7Wkg8ycJHNN2myadOtdRPUN8WeUdDyiisqBqkO8phjjOto3JYq6viqp/aH6p34+q/kdvKbzMXujcEPtdX6VP7U/VL8fVfyu3lLmYvdG4IjV1npVR7V31Xfx9V/I7eV3mYvdG4Lm6rrPS6j2rvquivqv5HbyniGL3RuCbyVdYQf2yp9q76ogrqk65DvKI2GL3RuCY1Ek0mfCTSP/qeSu/iJHa3HepLGMGoBRk0QA2I8T1MY5R1THvVnC9TI3KOlZvVvA9S2lNiNqtYzcIqk8OWaa+3SKjhzDT4Ur8vEZxnuUrOGNuoOIVraOAyO17B1lbvTxMhhZFC0NjYA1rRxAKFdeZucXuLnayujhmE0riq14w+5j3VFC3Np2uiHF0fRZrEsHNzJTjvHDgrmlxDRkl3qGYwg5EEEcSyzgQSCFZFwOkLs1iEUIuXQNTbpt0eqldK6ItSXboskkkeSS4hqpXSukOanApwK4SNRAUVpTSVqK0ozSmUzFIYVJYVHVDN6soXKWwqLnbtVtA5TGOXazWKvvlTwVBFm0HKSZ2xkfSe7ermF2hCrK+CjZmlPcNpWwYZw9S4fohBTjXkftmmI2yH6cgRHOJWBxCvlrZc79AGodSmk1QUEkkRCSSbVNBTVW2aIF3nDYe1Raiip6kfutv570WOaSP0SoyqtNPDnqOkHNmD3KhqsDpWaWkj5/wBKbHVyO1qNkia3PLNUEtIxhsCVMa8lciMlFdEAn3SCh5U5EuLqCSSMLi4kvXQuhN5EUBFCayozQjtTSUZlS44wUdpTiis8Fa8CSSZufmEd4V3S0bHayfv5IM1Y+IXaArLQYIsjQyWaCSodyTSEt7BkD1q7hpY2aQqebGqw3a0hvcPrpVkhhjgjbHCxscbRk1rRkB1KUAANCp3Oc92ZxuV1SXEEkl//2Q=="
             alt=""
           />
@@ -156,15 +186,175 @@ export default function Sidebar() {
             <span className="hidden group-hover:block">Profile</span>
           </button>
         </Link>
-        <Link
-          href="/more"
-          className="flex mt-[50px] items-center  hover:bg-gray-100  rounded-xl"
-        >
-          <button className="flex items-center gap-4 hover:bg-gray-100 p-3 rounded-xl">
+        <div className="flex mt-[50px] items-center  hover:bg-gray-100  rounded-xl">
+          <button
+            onClick={() => setOpenMore(!openMore)}
+            className="flex items-center gap-4 hover:bg-gray-100 p-3 rounded-xl w-full"
+          >
             {pathname === "/more" ? <MenuIcon /> : <MenuOutlinedIcon />}
+
             <span className="hidden group-hover:block">More</span>
           </button>
-        </Link>
+          {/* MORE MODAL */}
+          {openMore && (
+            <div
+              ref={modalRef}
+              className="
+      absolute
+      bottom-[90px]
+      left-3
+      w-[260px]
+      bg-white
+      rounded-3xl
+      shadow-2xl
+      border
+      border-gray-200
+      py-2
+      z-50
+      animate-in
+      fade-in
+      slide-in-from-bottom-2
+      duration-200
+    "
+            >
+              <button className="w-full flex items-center gap-4 px-5 py-4 hover:bg-gray-100 transition">
+                <SettingsIcon fontSize="small" />
+                <span className="text-[15px]">Settings</span>
+              </button>
+
+              <button className="w-full flex items-center gap-4 px-5 py-4 hover:bg-gray-100 transition">
+                <BoltOutlinedIcon fontSize="small" />
+                <span className="text-[15px]">Your Actions</span>
+              </button>
+
+              <button className="w-full flex items-center gap-4 px-5 py-4 hover:bg-gray-100 transition">
+                <BookmarkBorderIcon fontSize="small" />
+                <span className="text-[15px]">Saved</span>
+              </button>
+
+              <button className="w-full flex items-center gap-4 px-5 py-4 hover:bg-gray-100 transition">
+                <DarkModeOutlinedIcon fontSize="small" />
+                <span className="text-[15px]">Switch Mode</span>
+              </button>
+
+              <button className="w-full flex items-center gap-4 px-5 py-4 hover:bg-gray-100 transition">
+                <ReportProblemOutlinedIcon fontSize="small" />
+                <span
+                  onClick={() => {
+                    setOpenMore(false);
+                    setOpenReport(true);
+                  }}
+                  className="text-[15px]"
+                >
+                  Report a Problem
+                </span>
+              </button>
+              <div className="h-[1px] bg-gray-200 my-1" />
+              <button
+                className="
+    w-full
+    flex
+    items-center
+    gap-4
+    px-5
+    py-4
+    hover:bg-red-50
+    transition
+    text-red-500
+  "
+              >
+                <LogoutOutlinedIcon fontSize="small" />
+
+                <span
+                  onClick={() => {
+                    localStorage.removeItem("store_token");
+
+                    // если есть другие данные
+                    localStorage.removeItem("store_token");
+
+                    window.location.href = "/login";
+                  }}
+                  className="text-[15px] font-medium"
+                >
+                  Logout
+                </span>
+              </button>
+            </div>
+          )}
+
+          {/* REPORT MODAL */}
+          {openReport && (
+            <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/60">
+              <div className="w-[600px] bg-white rounded-[20px] overflow-hidden shadow-2xl flex relative">
+                {/* LEFT IMAGE */}
+
+                {/* RIGHT CONTENT */}
+                <div className="flex-1 p-8 relative">
+                  {/* CLOSE */}
+                  <button
+                    onClick={() => setOpenReport(false)}
+                    className="absolute cursor-pointer top-5 left-5 text-[20px] hover:opacity-70"
+                  >
+                    ✕
+                  </button>
+
+                  <h2 className="text-[20px] font-bold text-center mt-2 mb-8">
+                    Leave a review for Instagram
+                  </h2>
+
+                  <div className="space-y-6 text-[18px] leading-8 text-gray-800">
+                    <p>
+                      <span className="font-semibold">
+                        Looking for support?
+                      </span>{" "}
+                      Check out our{" "}
+                      <span className="text-blue-600 font-medium cursor-pointer">
+                        Help Center
+                      </span>{" "}
+                      for quick answers and AI assistance.
+                    </p>
+
+                    <p>
+                      If you're looking for help with specific products, please
+                      navigate to{" "}
+                      <span className="text-blue-600 font-medium cursor-pointer">
+                        Facebook
+                      </span>
+                      ,{" "}
+                      <span className="text-blue-600 font-medium cursor-pointer">
+                        Threads
+                      </span>
+                      ,{" "}
+                      <span className="text-blue-600 font-medium cursor-pointer">
+                        WhatsApp
+                      </span>
+                      .
+                    </p>
+
+                    <p className="text-gray-500">
+                      If the issue isn't resolved, send a problem report and
+                      we’ll gladly help!
+                    </p>
+                  </div>
+
+                  {/* BUTTONS */}
+                  <div className="mt-10 flex flex-col gap-4">
+                    <button className="w-full bg-[#4f5dfd] hover:bg-[#4452f0] text-white font-semibold py-4 rounded-2xl transition text-[18px]">
+                      Continue to report
+                    </button>
+
+                    <button
+                      onClick={() => setOpenReport(false)}
+                      className="text-[#4f5dfd] font-semibold text-[18px]"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
