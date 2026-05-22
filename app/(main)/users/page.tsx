@@ -152,10 +152,11 @@ const RightSidebar = () => {
             <div className="flex items-center gap-3">
               <img
                 src={
-                  user.avatar
-                    ? `${Api}/images/${user.avatar}`
+                  user.avatar?.trim()
+                    ? `${Api}/images/${user.avatar.trim()}`
                     : "https://cdn-icons-png.flaticon.com/512/149/149071.png"
                 }
+                onError={(e) => { (e.target as HTMLImageElement).src = "https://cdn-icons-png.flaticon.com/512/149/149071.png"; }}
                 className="w-[40px] h-[40px] rounded-full object-cover"
               />
 

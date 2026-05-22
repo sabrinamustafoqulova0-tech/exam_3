@@ -1,440 +1,485 @@
-'use client'
-import { useState, useEffect } from 'react'
-import Link from 'next/link'
-import { useRouter, usePathname } from 'next/navigation'
-import { useGetUsersQuery } from '../services/Search'
-import { useGetMyProfileQuery } from '../services/Profile'
+"use client";
 
-// Иконки из lucide-react
-import { 
-  Home, 
-  Search, 
-  Compass, 
-  Clapperboard, 
-  MessageSquare, 
-  Heart, 
-  PlusSquare, 
-  Menu 
-} from 'lucide-react'
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 
-const IMAGE_BASE_URL = "https://instagram-api.softclub.tj/images";
+// Icons for the main menu
+import HomeIcon from "@mui/icons-material/Home";
+import HomeOutlinedIcon from "@mui/icons-material/HomeOutlined";
+import SearchIcon from "@mui/icons-material/Search";
+import SearchOutlinedIcon from "@mui/icons-material/SearchOutlined";
+import SmartDisplayIcon from "@mui/icons-material/SmartDisplay";
+import SmartDisplayOutlinedIcon from "@mui/icons-material/SmartDisplayOutlined";
+import ChatIcon from "@mui/icons-material/Chat";
+import ChatOutlinedIcon from "@mui/icons-material/ChatOutlined";
+import FavoriteIcon from "@mui/icons-material/Favorite";
+import FavoriteBorderOutlinedIcon from "@mui/icons-material/FavoriteBorderOutlined";
+import AddBoxIcon from "@mui/icons-material/AddBox";
+import AddBoxOutlinedIcon from "@mui/icons-material/AddBoxOutlined";
+import CloseIcon from "@mui/icons-material/Close";
+import InstagramIcon from '@mui/icons-material/Instagram';
+import ExploreIcon from '@mui/icons-material/Explore';  
+import ExploreOutlinedIcon from "@mui/icons-material/ExploreOutlined";
 
-interface HistoryUser {
-  id: string
-  userName?: string
-  fullName?: string
-  image?: string
-}
+// Icons for the More menu
+import MenuIcon from "@mui/icons-material/Menu";
+import MenuOutlinedIcon from "@mui/icons-material/MenuOutlined";
+import SettingsIcon from "@mui/icons-material/Settings";
+import BoltOutlinedIcon from "@mui/icons-material/BoltOutlined";
+import BookmarkBorderIcon from "@mui/icons-material/BookmarkBorder";
+import DarkModeOutlinedIcon from "@mui/icons-material/DarkModeOutlined";
+import ReportProblemOutlinedIcon from "@mui/icons-material/ReportProblemOutlined";
+import LogoutOutlinedIcon from "@mui/icons-material/LogoutOutlined";
 
-export default function Navbar() {
-  const router = useRouter()
-  const pathname = usePathname()
-  
-  const [isOpenSearch, setIsOpenSearch] = useState(false)
-  const [searchQuery, setSearchQuery] = useState('')
-  const [debouncedQuery, setDebouncedQuery] = useState('')
-  const [searchHistory, setSearchHistory] = useState<HistoryUser[]>([])
+import { useGetUsersQuery } from "../services/Search";
 
-  // Загружаем историю поиска из localStorage при монтировании
+export default function Sidebar() {
+  const pathname = usePathname();
+  const router = useRouter();
+  const modalRef = useRef<HTMLDivElement>(null);
+
+  // ===== STATES =====
+  const [openSearch, setOpenSearch] = useState(false);
+  const [openMore, setOpenMore] = useState(false);
+  const [openReport, setOpenReport] = useState(false);
+  const [query, setQuery] = useState("");
+  const [debounced, setDebounced] = useState("");
+  const [history, setHistory] = useState<any[]>([]);
+
+  // Close "More" when clicking outside the modal
   useEffect(() => {
-    const savedHistory = localStorage.getItem('instagram_recent_searches')
-    if (savedHistory) {
-      try {
-        setSearchHistory(JSON.parse(savedHistory))
-      } catch (e) {
-        console.error('Ошибка чтения истории поиска:', e)
+    function handleClickOutside(event: MouseEvent) {
+      if (modalRef.current && !modalRef.current.contains(event.target as Node)) {
+        setOpenMore(false);
       }
     }
-  }, [])
-
-  // Эффект Debounce для оптимизации запросов к поиску
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedQuery(searchQuery)
-    }, 400)
-
-    return () => clearTimeout(handler)
-  }, [searchQuery])
-
-  // Запросы к API
-  const { data: users, isLoading, isFetching } = useGetUsersQuery(debouncedQuery, {
-    skip: !isOpenSearch || debouncedQuery.trim() === '',
-  })
-
-  const { data: myProfile } = useGetMyProfileQuery(undefined)
-  
-  const myUser = myProfile?.data || myProfile
-  const myRawAvatar = myUser?.avatar || myUser?.image || myUser?.imagePath
-  const myProfileAvatar = myRawAvatar
-    ? (myRawAvatar.startsWith('http') ? myRawAvatar : `${IMAGE_BASE_URL}/${myRawAvatar}`)
-    : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80'
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const toggleSearch = () => {
-    setIsOpenSearch(!isOpenSearch)
-    if (isOpenSearch) {
-      setSearchQuery('')
-      setDebouncedQuery('')
+    setOpenSearch(!openSearch);
+    setOpenMore(false);
+    if (!openSearch) {
+      setQuery("");
+      setDebounced("");
     }
-  }
+  };
 
-  const usersList = Array.isArray(users) ? users : []
+  const closeSearch = () => {
+    setOpenSearch(false);
+    setQuery("");
+    setDebounced("");
+  };
 
-  const filteredUsers = usersList.filter((user: any) =>
-    user?.userName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    user?.fullName?.toLowerCase().includes(searchQuery.toLowerCase())
-  )
+  // Debounce for search
+  useEffect(() => {
+    const t = setTimeout(() => setDebounced(query), 400);
+    return () => clearTimeout(t);
+  }, [query]);
 
-  // Клик по пользователю: сохраняем в историю и переходим
-  const handleUserClick = (user: HistoryUser) => {
-    setIsOpenSearch(false)
-    setSearchQuery('')
-    setDebouncedQuery('')
+  const { data: users } = useGetUsersQuery(debounced, {
+    skip: !openSearch || debounced.trim() === "",
+  });
 
-    setSearchHistory((prevHistory) => {
-      const filtered = prevHistory.filter((item) => item.id !== user.id)
-      const updated = [user, ...filtered].slice(0, 10) // Храним топ-10 последних
-      localStorage.setItem('instagram_recent_searches', JSON.stringify(updated))
-      return updated
-    })
+  const usersList = Array.isArray(users) ? users : [];
+  const filtered = usersList.filter((u: any) =>
+    u?.userName?.toLowerCase().includes(query.toLowerCase())
+  );
 
-    router.push(`/user/${user.id}`)
-  }
+  useEffect(() => {
+    const saved = localStorage.getItem("search_history");
+    if (saved) setHistory(JSON.parse(saved));
+  }, []);
 
-  // Очистить всю историю поиска
-  const clearAllHistory = () => {
-    setSearchHistory([])
-    localStorage.removeItem('instagram_recent_searches')
-  }
+  const saveToHistory = (user: any) => {
+    const updated = [user, ...history.filter((x) => x.id !== user.id)].slice(0, 10);
+    setHistory(updated);
+    localStorage.setItem("search_history", JSON.stringify(updated));
+  };
 
-  // Удалить конкретного пользователя из истории
-  const removeHistoryItem = (e: React.MouseEvent, userId: string) => {
-    e.stopPropagation() // Останавливаем клик, чтобы не перейти на профиль
-    setSearchHistory((prevHistory) => {
-      const updated = prevHistory.filter((item) => item.id !== userId)
-      localStorage.setItem('instagram_recent_searches', JSON.stringify(updated))
-      return updated
-    })
-  }
+  const openUser = (user: any) => {
+    saveToHistory(user);
+    closeSearch();
+    router.push(`/user/${user.id}`);
+  };
 
-  // Хелпер для разбора аватарки и скрытия "женщины"
-const getAvatarData = (user: any) => {
-    // Берём именно то поле, которое присылает сервер (avatar, image или imagePath)
-    const rawImage = (user?.avatar || user?.image || user?.imagePath || '').trim();
-    
-    // Строим полный путь к картинке
-    const avatarUrl = rawImage 
-      ? (rawImage.startsWith('http') ? rawImage : `${IMAGE_BASE_URL}/${rawImage}`)
-      : '';
-    
-    // Проверяем, пустая ли ссылка или содержит ли она дефолтную женщину с Unsplash
-    const isDefaultWoman = avatarUrl.includes('photo-1534528741775-53994a69daeb') || !rawImage;
-    
-    return {
-      hasAvatar: !isDefaultWoman,
-      avatarUrl: avatarUrl,
-      firstLetter: (user.userName || user.fullName || 'U').charAt(0)
-    }
-  }
+  // If search or More is open, sidebar should not expand on hover
+  const isLocked = openSearch || openMore;
+
   return (
-    <div className="flex fixed left-0 top-0 z-50 h-screen select-none">
+    <div className="relative flex h-screen bg-white text-black select-none font-sans antialiased">
       
-      {/* ОСНОВНОЙ НАВБАР (ЛЕВАЯ СЛУЖЕБНАЯ ПАНЕЛЬ) */}
-      <nav 
-        className={`flex flex-col justify-between h-full bg-white border-r border-gray-200 px-3 pt-10 pb-6 font-sans text-[16px] text-[#262626] transition-all duration-300 ease-in-out z-20 ${
-          isOpenSearch ? 'w-[73px]' : 'w-[244px]'
-        }`}
+      {/* ===== LEFT SIDEBAR ===== */}
+      <div
+        className={`
+          flex flex-col justify-between p-3 border-r border-[#e4e4e7] bg-white h-screen transition-all duration-300 z-30 relative
+          ${isLocked 
+            ? "w-[73px]" 
+            : "w-[73px] hover:w-[245px] group shadow-[0_0_10px_rgba(0,0,0,0.01)] hover:shadow-[4px_0_24px_rgba(0,0,0,0.04)]"
+          }
+        `}
       >
-        <div className="flex flex-col gap-2">
-          {/* Логотип Instagram */}
-          <div className="mb-7 px-3 h-[40px] flex items-center justify-start overflow-hidden">
-            {isOpenSearch ? (
-              <Link href="/">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  className="w-7 h-7 min-w-[28px]"
-                  fill="none"
-                >
-                  <defs>
-                    <linearGradient id="instagram-gradient" x1="0%" y1="100%" x2="100%" y2="0%">
-                      <stop offset="0%" stopColor="#feda75" />
-                      <stop offset="25%" stopColor="#fa7e1e" />
-                      <stop offset="50%" stopColor="#d62976" />
-                      <stop offset="75%" stopColor="#962fbf" />
-                      <stop offset="100%" stopColor="#4f5bd5" />
-                    </linearGradient>
-                  </defs>
-                  <rect
-                    x="3"
-                    y="3"
-                    width="18"
-                    height="18"
-                    rx="5"
-                    stroke="url(#instagram-gradient)"
-                    strokeWidth="2"
-                  />
-                  <circle
-                    cx="12"
-                    cy="12"
-                    r="4"
-                    stroke="url(#instagram-gradient)"
-                    strokeWidth="2"
-                  />
-                  <circle
-                    cx="17"
-                    cy="7"
-                    r="1.2"
-                    fill="url(#instagram-gradient)"
-                  />
-                </svg>
+        {/* TOP MENU SECTION */}
+        <div className="flex flex-col gap-1.5 pt-6">
+          
+          {/* Logo */}
+          <div className="px-3 mb-7 h-10 flex items-center relative overflow-hidden">
+            {openSearch ? (
+              <Link href="/home" className="text-black hover:scale-105 transition duration-200">
+                <InstagramIcon sx={{ fontSize: 28 }} />
               </Link>
             ) : (
-              <Link href="/" className="flex items-center gap-2">
-                <img
-                  src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/2a/Instagram_logo.svg/1200px-Instagram_logo.svg.png"
-                  alt="Instagram"
-                  className="w-[120px] object-contain"
-                />
-              </Link>
+              <>
+                <div className="block group-hover:opacity-0 transition-opacity duration-200 absolute left-3">
+                  <Link href="/home">
+                    <InstagramIcon sx={{ fontSize: 28 }} />
+                  </Link>
+                </div>
+                <span className="font-serif text-2xl font-bold tracking-wide opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap pl-1">
+                  Instagram
+                </span>
+              </>
             )}
           </div>
 
-          {/* Пункты Навигации */}
-          <div className="flex flex-col gap-1">
-            {/* HOME */}
-            <Link href="/home" className="flex items-center gap-4 p-3 rounded-xl hover:bg-black/5 transition-colors group">
-              <Home 
-                className="w-6 h-6 min-w-[24px] text-[#262626] group-hover:scale-105 transition-transform" 
-                fill={pathname === "/home" ? "#262626" : "none"}
-                strokeWidth={pathname === "/home" ? 2.5 : 2}
+          {/* Home */}
+          <Link
+            href="/home"
+            className={`flex items-center gap-4 p-3 rounded-xl hover:bg-[#f4f4f5] transition duration-200 group/link ${
+              pathname === "/home" ? "font-bold text-black bg-[#f4f4f5]" : "text-black"
+            }`}
+          >
+            <div className={`min-w-[28px] flex justify-center transition-transform duration-200 ${pathname === "/home" ? "scale-105" : ""}`}>
+              {pathname === "/home" ? <HomeIcon sx={{ fontSize: 28 }} /> : <HomeOutlinedIcon sx={{ fontSize: 28 }} />}
+            </div>
+            <span className={`text-[15px] tracking-wide whitespace-nowrap transition-opacity duration-200 ${pathname === "/home" ? "font-bold" : "font-normal"} ${openSearch ? "hidden" : "opacity-0 group-hover:opacity-100"}`}>
+              Home
+            </span>
+          </Link>
+
+          {/* Search */}
+          <button
+            onClick={toggleSearch}
+            className={`flex items-center gap-4 p-3 rounded-xl hover:bg-[#f4f4f5] transition duration-200 text-left ${
+              openSearch ? "border border-[#e4e4e7] bg-[#f4f4f5] font-bold" : ""
+            }`}
+          >
+            <div className="min-w-[28px] flex justify-center">
+              {openSearch ? <SearchIcon sx={{ fontSize: 28 }} /> : <SearchOutlinedIcon sx={{ fontSize: 28 }} />}
+            </div>
+            <span className={`text-[15px] tracking-wide whitespace-nowrap ${openSearch ? "hidden" : "opacity-0 group-hover:opacity-100"}`}>
+              Search
+            </span>
+          </button>
+
+          {/* Reels */}
+          <Link
+            href="/reels"
+            className={`flex items-center gap-4 p-3 rounded-xl hover:bg-[#f4f4f5] transition duration-200 ${
+              pathname === "/reels" ? "font-bold text-black bg-[#f4f4f5]" : "text-black"
+            }`}
+          >
+            <div className={`min-w-[28px] flex justify-center transition-transform duration-200 ${pathname === "/reels" ? "scale-105" : ""}`}>
+              {pathname === "/reels" ? <SmartDisplayIcon sx={{ fontSize: 28 }} /> : <SmartDisplayOutlinedIcon sx={{ fontSize: 28 }} />}
+            </div>
+            <span className={`text-[15px] tracking-wide whitespace-nowrap ${openSearch ? "hidden" : "opacity-0 group-hover:opacity-100"}`}>
+              Reels
+            </span>
+          </Link>
+         <Link
+  href="/expore"
+  className={`flex items-center gap-4 p-3 rounded-xl hover:bg-[#f4f4f5] transition duration-200 ${
+    pathname === "/expore" ? "font-bold text-black bg-[#f4f4f5]" : "text-black"
+  }`}
+>
+  <div className={`min-w-[28px] flex justify-center transition-transform duration-200 ${pathname === "/explore" ? "scale-105" : ""}`}>
+    {pathname === "/expore" ? <ExploreIcon sx={{ fontSize: 28 }} /> : <ExploreOutlinedIcon sx={{ fontSize: 28 }} />}
+  </div>
+  <span className={`text-[15px] tracking-wide whitespace-nowrap ${openSearch ? "hidden" : "opacity-0 group-hover:opacity-100"}`}>
+    Explore
+  </span>
+</Link>
+          {/* Messages */}
+          <Link
+            href="/messages"
+            className={`flex items-center gap-4 p-3 rounded-xl hover:bg-[#f4f4f5] transition duration-200 ${
+              pathname === "/messages" ? "font-bold text-black bg-[#f4f4f5]" : "text-black"
+            }`}
+          >
+            <div className={`min-w-[28px] flex justify-center transition-transform duration-200 ${pathname === "/messages" ? "scale-105" : ""}`}>
+              {pathname === "/messages" ? <ChatIcon sx={{ fontSize: 28 }} /> : <ChatOutlinedIcon sx={{ fontSize: 28 }} />}
+            </div>
+            <span className={`text-[15px] tracking-wide whitespace-nowrap ${openSearch ? "hidden" : "opacity-0 group-hover:opacity-100"}`}>
+             Masseges
+            </span>
+          </Link>
+
+          {/* Notifications */}
+          <Link
+            href="/notifications"
+            className={`flex items-center gap-4 p-3 rounded-xl hover:bg-[#f4f4f5] transition duration-200 ${
+              pathname === "/notifications" ? "font-bold text-black bg-[#f4f4f5]" : "text-black"
+            }`}
+          >
+            <div className={`min-w-[28px] flex justify-center transition-transform duration-200 ${pathname === "/notifications" ? "scale-105" : ""}`}>
+              {pathname === "/notifications" ? <FavoriteIcon sx={{ fontSize: 28 }} /> : <FavoriteBorderOutlinedIcon sx={{ fontSize: 28 }} />}
+            </div>
+            <span className={`text-[15px] tracking-wide whitespace-nowrap ${openSearch ? "hidden" : "opacity-0 group-hover:opacity-100"}`}>
+              Notofication
+            </span>
+          </Link>
+
+          {/* Create */}
+          <Link
+            href="/create"
+            className={`flex items-center gap-4 p-3 rounded-xl hover:bg-[#f4f4f5] transition duration-200 ${
+              pathname === "/create" ? "font-bold text-black bg-[#f4f4f5]" : "text-black"
+            }`}
+          >
+            <div className={`min-w-[28px] flex justify-center transition-transform duration-200 ${pathname === "/create" ? "scale-105" : ""}`}>
+              {pathname === "/create" ? <AddBoxIcon sx={{ fontSize: 28 }} /> : <AddBoxOutlinedIcon sx={{ fontSize: 28 }} />}
+            </div>
+            <span className={`text-[15px] tracking-wide whitespace-nowrap ${openSearch ? "hidden" : "opacity-0 group-hover:opacity-100"}`}>
+              Create
+            </span>
+          </Link>
+
+          {/* Profile */}
+          <Link
+            href="/profile"
+            className={`flex items-center gap-4 p-3 rounded-xl hover:bg-[#f4f4f5] transition duration-200 ${
+              pathname === "/profile" ? "font-bold text-black bg-[#f4f4f5]" : "text-black"
+            }`}
+          >
+            <div className="min-w-[28px] flex justify-center">
+              <img
+                src="https://images.unsplash.com/photo-1534528741775-53994a69daeb"
+                alt="Profile"
+                className={`w-7 h-7 rounded-full object-cover transition-transform ${
+                  pathname === "/profile" ? "ring-2 ring-black scale-105" : ""
+                }`}
               />
-              {!isOpenSearch && <span className={`${pathname === "/home" ? "font-bold" : "font-normal"} whitespace-nowrap`}>Home</span>}
-            </Link>
-
-            {/* SEARCH */}
-            <button 
-              onClick={toggleSearch} 
-              className={`flex items-center gap-4 p-3 rounded-xl hover:bg-black/5 transition-colors group w-full text-left ${
-                isOpenSearch ? 'border border-gray-200 bg-gray-50' : ''
-              }`}
-            >
-              <Search className={`w-6 h-6 min-w-[24px] text-[#262626] group-hover:scale-105 transition-transform ${isOpenSearch || pathname === "/search" ? 'stroke-[2.5]' : ''}`} />
-              {!isOpenSearch && <span className={`${pathname === "/search" ? "font-bold" : "font-normal"} whitespace-nowrap`}>Search</span>}
-            </button>
-
-            {/* EXPLORE */}
-            <Link href="/explore" className="flex items-center gap-4 p-3 rounded-xl hover:bg-black/5 transition-colors group">
-              <Compass 
-                className="w-6 h-6 min-w-[24px] text-[#262626] group-hover:scale-105 transition-transform" 
-                fill={pathname === "/explore" ? "#262626" : "none"}
-                strokeWidth={pathname === "/explore" ? 2.5 : 2}
-              />
-              {!isOpenSearch && <span className={`${pathname === "/explore" ? "font-bold" : "font-normal"} whitespace-nowrap`}>Explore</span>}
-            </Link>
-
-            {/* REELS */}
-            <Link href="/reels" className="flex items-center gap-4 p-3 rounded-xl hover:bg-black/5 transition-colors group">
-              <Clapperboard 
-                className="w-6 h-6 min-w-[24px] text-[#262626] group-hover:scale-105 transition-transform" 
-                fill={pathname === "/reels" ? "#262626" : "none"}
-                strokeWidth={pathname === "/reels" ? 2.5 : 2}
-              />
-              {!isOpenSearch && <span className={`${pathname === "/reels" ? "font-bold" : "font-normal"} whitespace-nowrap`}>Reels</span>}
-            </Link>
-
-            {/* MESSAGES */}
-            <Link href="/messages" className="flex items-center gap-4 p-3 rounded-xl hover:bg-black/5 transition-colors group">
-              <MessageSquare 
-                className="w-6 h-6 min-w-[24px] text-[#262626] group-hover:scale-105 transition-transform" 
-                fill={pathname === "/messages" ? "#262626" : "none"}
-                strokeWidth={pathname === "/messages" ? 2.5 : 2}
-              />
-              {!isOpenSearch && <span className={`${pathname === "/messages" ? "font-bold" : "font-normal"} whitespace-nowrap`}>Messages</span>}
-            </Link>
-
-            {/* NOTIFICATIONS */}
-            <Link href="/notifications" className="flex items-center gap-4 p-3 rounded-xl hover:bg-black/5 transition-colors group">
-              <Heart 
-                className="w-6 h-6 min-w-[24px] text-[#262626] group-hover:scale-105 transition-transform" 
-                fill={pathname === "/notifications" ? "#262626" : "none"}
-                strokeWidth={pathname === "/notifications" ? 2.5 : 2}
-              />
-              {!isOpenSearch && <span className={`${pathname === "/notifications" ? "font-bold" : "font-normal"} whitespace-nowrap`}>Notifications</span>}
-            </Link>
-
-            {/* CREATE */}
-            <Link href="/create" className="flex items-center gap-4 p-3 rounded-xl hover:bg-black/5 transition-colors group">
-              <PlusSquare 
-                className="w-6 h-6 min-w-[24px] text-[#262626] group-hover:scale-105 transition-transform" 
-                fill={pathname === "/create" ? "#262626" : "none"}
-                strokeWidth={pathname === "/create" ? 2.5 : 2}
-              />
-              {!isOpenSearch && <span className={`${pathname === "/create" ? "font-bold" : "font-normal"} whitespace-nowrap`}>Create</span>}
-            </Link>
-
-            {/* PROFILE */}
-            <Link href="/profile" className="flex items-center gap-4 p-3 rounded-xl hover:bg-black/5 transition-colors group">
-              <div className={`w-6 h-6 min-w-[24px] rounded-full overflow-hidden border group-hover:scale-105 transition-transform ${pathname === "/profile" ? "border-black border-2" : "border-gray-300"}`}>
-                <img 
-                  src={myProfileAvatar} 
-                  alt="My Profile" 
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80'
-                  }}
-                />
-              </div>
-              {!isOpenSearch && <span className={`${pathname === "/profile" ? "font-bold" : "font-semibold"} whitespace-nowrap`}>Profile</span>}
-            </Link>
-          </div>
+            </div>
+            <span className={`text-[15px] tracking-wide whitespace-nowrap ${openSearch ? "hidden" : "opacity-0 group-hover:opacity-100"}`}>
+              Profile
+            </span>
+          </Link>
         </div>
 
-        {/* MORE / MENU BUTTON */}
-        <div>
-          <button className="flex items-center gap-4 p-3 rounded-xl hover:bg-black/5 transition-colors group w-full text-left">
-            <Menu className={`w-6 h-6 min-w-[24px] text-[#262626] group-hover:scale-105 transition-transform ${pathname === "/more" ? "stroke-[2.5]" : ""}`} />
-            {!isOpenSearch && <span className={`${pathname === "/more" ? "font-bold" : "font-normal"} whitespace-nowrap`}>More</span>}
+        {/* LOWER MENU SECTION ("More") */}
+        <div className="mb-2 relative">
+          <button
+            onClick={() => setOpenMore(!openMore)}
+            className={`flex items-center gap-4 hover:bg-[#f4f4f5] p-3 rounded-xl w-full text-left transition duration-200 ${
+              openMore ? "font-bold bg-[#f4f4f5]" : ""
+            }`}
+          >
+            <div className="min-w-[28px] flex justify-center">
+              {openMore ? <MenuIcon sx={{ fontSize: 28 }} /> : <MenuOutlinedIcon sx={{ fontSize: 28 }} />}
+            </div>
+            <span className={`text-[15px] tracking-wide whitespace-nowrap ${openSearch ? "hidden" : "opacity-0 group-hover:opacity-100"}`}>
+              More
+            </span>
+          </button>
+
+          {/* MORE MODAL */}
+          {openMore && (
+            <div
+              ref={modalRef}
+              className="
+                absolute
+                bottom-[65px]
+                left-0
+                w-[250px]
+                bg-white
+                rounded-2xl
+                shadow-[0_4px_12px_rgba(0,0,0,0.15)]
+                border
+                border-gray-100
+                py-1.5
+                z-50
+                transition-all
+              "
+            >
+              <button className="w-full flex items-center gap-3.5 px-4 py-3.5 hover:bg-[#f4f4f5] transition text-left text-sm font-medium">
+                <SettingsIcon fontSize="small" />
+                <span>Settings</span>
+              </button>
+
+              <button className="w-full flex items-center gap-3.5 px-4 py-3.5 hover:bg-[#f4f4f5] transition text-left text-sm font-medium">
+                <BoltOutlinedIcon fontSize="small" />
+                <span>Your activity</span>
+              </button>
+
+              <button className="w-full flex items-center gap-3.5 px-4 py-3.5 hover:bg-[#f4f4f5] transition text-left text-sm font-medium">
+                <BookmarkBorderIcon fontSize="small" />
+                <span>Saved</span>
+              </button>
+
+              <button className="w-full flex items-center gap-3.5 px-4 py-3.5 hover:bg-[#f4f4f5] transition text-left text-sm font-medium">
+                <DarkModeOutlinedIcon fontSize="small" />
+                <span>Toggle theme</span>
+              </button>
+
+              <button 
+                onClick={() => {
+                  setOpenMore(false);
+                  setOpenReport(true);
+                }}
+                className="w-full flex items-center gap-3.5 px-4 py-3.5 hover:bg-[#f4f4f5] transition text-left text-sm font-medium"
+              >
+                <ReportProblemOutlinedIcon fontSize="small" />
+                <span>Report a problem</span>
+              </button>
+              
+              <div className="h-[1px] bg-gray-100 my-1.5" />
+              
+              <button
+                onClick={() => {
+                  localStorage.removeItem("store_token");
+                  window.location.href = "/login";
+                }}
+                className="w-full flex items-center gap-3.5 px-4 py-3.5 hover:bg-red-50 transition text-left text-sm font-semibold text-red-500"
+              >
+                <LogoutOutlinedIcon fontSize="small" />
+                <span>Log out</span>
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ===== SEARCH SLIDE-OUT MODAL ===== */}
+      <div
+        className={`
+          fixed top-0 bottom-0 w-[396px] bg-white border-r border-[#e4e4e7] p-6 pt-8 z-20
+          transition-all duration-300 ease-in-out shadow-[10px_0_30px_rgba(0,0,0,0.03)]
+          rounded-r-2xl
+          ${openSearch ? "left-[73px] opacity-100 visible" : "left-[-400px] opacity-0 invisible"}
+        `}
+      >
+        <div className="flex items-center justify-between mb-8">
+          <h2 className="text-2xl font-bold tracking-wide">Search</h2>
+          <button 
+            onClick={closeSearch}
+            className="p-1.5 rounded-full text-gray-400 hover:text-black hover:bg-[#f4f4f5] transition"
+          >
+            <CloseIcon sx={{ fontSize: 22 }} />
           </button>
         </div>
-      </nav>
 
-      {/* ВЫЕЗЖАЮЩАЯ СБОКУ ПАНЕЛЬ ПОИСКА */}
-      <div 
-        className={`w-[397px] h-full bg-white border-r border-gray-200 shadow-[4px_0_24px_rgba(0,0,0,0.05)] transition-all duration-300 ease-in-out px-6 pt-6 transform rounded-r-3xl z-10 ${
-          isOpenSearch ? 'translate-x-0 opacity-100' : '-translate-x-full opacity-0 pointer-events-none absolute'
-        }`}
-        style={{ marginLeft: isOpenSearch ? '0px' : '-397px' }}
-      >
-        <h2 className="text-[24px] font-bold mb-6 text-black tracking-wide">Search</h2>
-        
         <div className="relative mb-6">
-          <input 
-            type="text" 
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search" 
-            className="w-full bg-[#efefef] rounded-lg px-4 py-2.5 text-[14px] outline-none placeholder-gray-500 focus:bg-white border border-transparent focus:border-gray-300 transition-all"
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search"
+            className="w-full p-2.5 px-4 bg-[#f4f4f5] text-black rounded-lg outline-none text-sm placeholder-gray-400 border border-transparent focus:bg-white focus:border-[#e4e4e7] transition"
           />
-          {searchQuery && (
+          {query && (
             <button 
-              onClick={() => { setSearchQuery(''); setDebouncedQuery(''); }}
-              className="absolute right-3 top-1/2 -translate-y-1/2 bg-[#c7c7c7] text-white rounded-full w-4 h-4 flex items-center justify-center text-[10px] font-bold hover:bg-[#8e8e8e]"
+              onClick={() => setQuery("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-white bg-gray-300 rounded-full w-4 h-4 flex items-center justify-center font-bold"
             >
               ✕
             </button>
           )}
         </div>
-        
-        <hr className="border-gray-100 -mx-6 mb-4" />
-        
-        <div className="flex flex-col h-[calc(100%-165px)]">
-          {searchQuery.trim() === '' ? (
-            // ТЕПЕРЬ ТУТ ПОЛНОЦЕННАЯ РАБОЧАЯ ИСТОРИЯ ИЗ LOCALSTORAGE (RECENT)
-            <div className="flex flex-col h-full">
-              <div className="flex items-center justify-between mb-4 px-1">
-                <div className="text-[15px] font-semibold text-black">Recent</div>
-                {searchHistory.length > 0 && (
-                  <button 
-                    onClick={clearAllHistory}
-                    className="text-[14px] font-semibold text-[#0095f6] hover:text-[#00376b] transition-colors"
+
+        <hr className="border-[#f4f4f5] mb-4" />
+
+        <div className="overflow-y-auto h-[calc(100vh-180px)] pr-1">
+          {query === "" ? (
+            <>
+              <div className="flex justify-between items-center mb-4 px-1">
+                  <h3 className="font-bold text-sm text-black">Recent</h3>
+                {history.length > 0 && (
+                  <button
+                    onClick={() => { setHistory([]); localStorage.removeItem("search_history"); }}
+                    className="text-xs text-[#0095f6] font-semibold hover:text-[#00376b] transition"
                   >
                     Clear all
                   </button>
                 )}
               </div>
-              
-              {searchHistory.length === 0 ? (
-                <div className="flex flex-col items-center justify-center flex-1 text-center text-[14px] text-gray-400 font-normal pb-20">
+
+              {history.length === 0 ? (
+                <div className="text-center text-gray-400 text-sm mt-16 font-medium">
                   No recent searches.
                 </div>
               ) : (
-                <div className="flex flex-col gap-1 overflow-y-auto flex-1 pr-1 custom-scrollbar">
-                  {searchHistory.map((user) => {
-                    const { hasAvatar, avatarUrl, firstLetter } = getAvatarData(user)
-                    return (
-                      <div 
-                        key={`history-${user.id}`} 
-                        onClick={() => handleUserClick(user)}
-                        className="flex items-center justify-between p-2.5 rounded-xl hover:bg-gray-50 cursor-pointer transition-colors active:scale-[0.99]"
-                      >
-                        <div className="flex items-center gap-3 overflow-hidden">
-                          <div className="w-11 h-11 rounded-full bg-gray-100 overflow-hidden flex-shrink-0 border border-gray-200 flex items-center justify-center text-[16px] font-bold text-[#262626] uppercase">
-                            {hasAvatar ? (
-                              <img src={avatarUrl} alt={user.userName} className="w-full h-full object-cover" />
-                            ) : (
-                              <span>{firstLetter}</span>
-                            )}
-                          </div>
-                          <div className="flex flex-col truncate">
-                            <span className="text-[14px] font-semibold text-[#262626] leading-tight truncate">{user.userName || 'username'}</span>
-                            <span className="text-[14px] text-gray-400 leading-tight truncate mt-0.5 font-normal">{user.fullName || ''}</span>
-                          </div>
-                        </div>
-                        <button 
-                          onClick={(e) => removeHistoryItem(e, user.id)}
-                          className="text-gray-400 hover:text-black p-2 text-[14px]"
-                        >
-                          ✕
-                        </button>
+                <div className="flex flex-col gap-1">
+                  {history.map((u) => (
+                    <div
+                      key={u.id}
+                      onClick={() => openUser(u)}
+                      className="p-2 hover:bg-[#f4f4f5] rounded-lg cursor-pointer flex items-center gap-3 transition"
+                    >
+                      <div className="w-11 h-11 bg-[#f4f4f5] rounded-full flex items-center justify-center font-bold text-gray-500 text-sm">
+                        {u.userName?.substring(0, 2).toUpperCase()}
                       </div>
-                    )
-                  })}
+                      <span className="font-semibold text-sm text-black">{u.userName}</span>
+                    </div>
+                  ))}
                 </div>
               )}
-            </div>
+            </>
           ) : (
-            // ДИНАМИЧЕСКИЕ РЕЗУЛЬТАТЫ С СЕРВЕРА
-            <div className="flex flex-col h-full">
-              <div className="text-[15px] font-semibold text-black mb-4 px-1">Accounts</div>
-              
-              <div className="flex flex-col gap-1 overflow-y-auto flex-1 pr-1 custom-scrollbar">
-                {isLoading || isFetching ? (
-                  <div className="text-gray-400 text-center py-10 text-[14px]">Searching accounts...</div>
-                ) : filteredUsers.length > 0 ? (
-                  filteredUsers.map((user: any) => {
-                    const { hasAvatar, avatarUrl, firstLetter } = getAvatarData(user)
-
-                    return (
-                      <div 
-                        key={user.id} 
-                        onClick={() => handleUserClick(user)}
-                        className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-gray-50 cursor-pointer transition-colors active:scale-[0.99]"
-                      >
-                        <div className="w-11 h-11 rounded-full bg-gray-100 overflow-hidden flex-shrink-0 border border-gray-200 flex items-center justify-center text-[16px] font-bold text-[#262626] uppercase">
-                          {hasAvatar ? (
-                            <img 
-                              src={avatarUrl} 
-                              alt={user.userName} 
-                              className="w-full h-full object-cover"
-                              onError={(e) => {
-                                (e.target as HTMLImageElement).src = "";
-                              }}
-                            />
-                          ) : (
-                            <span>{firstLetter}</span>
-                          )}
-                        </div>
-                        <div className="flex flex-col truncate">
-                          <span className="text-[14px] font-semibold text-[#262626] leading-tight truncate">
-                            {user.userName || 'username'}
-                          </span>
-                          <span className="text-[14px] text-gray-400 leading-tight truncate mt-0.5 font-normal">
-                            {user.fullName || ''}
-                          </span>
-                        </div>
+            <>
+              <h3 className="font-bold mb-3 text-sm text-gray-400 px-1">Results</h3>
+              {filtered.length === 0 ? (
+                <div className="text-center text-gray-400 text-sm mt-16">
+                  Nothing found
+                </div>
+              ) : (
+                <div className="flex flex-col gap-1">
+                  {filtered.map((u) => (
+                    <div
+                      key={u.id}
+                      onClick={() => openUser(u)}
+                      className="p-2 hover:bg-[#f4f4f5] rounded-lg cursor-pointer flex items-center gap-3 transition"
+                    >
+                      <div className="w-11 h-11 bg-[#f4f4f5] rounded-full flex items-center justify-center font-bold text-gray-500 text-sm">
+                        {u.userName?.substring(0, 2).toUpperCase()}
                       </div>
-                    )
-                  })
-                ) : (
-                  <div className="text-[14px] text-gray-400 mt-16 text-center px-4">
-                    No accounts found matching &quot;{searchQuery}&quot;
-                  </div>
-                )}
-              </div>
-            </div>
+                      <span className="font-semibold text-sm text-black">{u.userName}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
+
+      {/* ===== REPORT MODAL ===== */}
+      {openReport && (
+        <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="w-[500px] bg-white rounded-2xl overflow-hidden shadow-2xl p-6 relative border border-gray-100 text-center animate-in fade-in zoom-in-95 duration-150">
+            <button
+              onClick={() => setOpenReport(false)}
+              className="absolute cursor-pointer top-4 left-4 text-gray-400 hover:text-black transition text-lg"
+            >
+              ✕
+            </button>
+            <h2 className="text-xl font-bold mt-2 mb-4">
+              Leave feedback about Instagram
+            </h2>
+            <textarea 
+              placeholder="What happened or what would you like to suggest?" 
+              className="w-full h-32 p-3 bg-[#f4f4f5] border border-transparent rounded-xl outline-none text-sm resize-none focus:border-gray-300 focus:bg-white transition mb-4"
+            />
+            <button 
+              onClick={() => setOpenReport(false)}
+              className="w-full py-2.5 bg-[#0095f6] hover:bg-[#1877f2] text-white rounded-xl font-semibold text-sm transition"
+            >
+              Send feedback
+            </button>
+          </div>
+        </div>
+      )}
+
     </div>
-  )
+  );
 }
