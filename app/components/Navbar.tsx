@@ -188,13 +188,13 @@ export default function Sidebar() {
               Reels
             </span>
           </Link>
-         <Link
+          <Link
   href="/expore"
   className={`flex items-center gap-4 p-3 rounded-xl hover:bg-[#f4f4f5] transition duration-200 ${
     pathname === "/expore" ? "font-bold text-black bg-[#f4f4f5]" : "text-black"
   }`}
 >
-  <div className={`min-w-[28px] flex justify-center transition-transform duration-200 ${pathname === "/explore" ? "scale-105" : ""}`}>
+  <div className={`min-w-[28px] flex justify-center transition-transform duration-200 ${pathname === "/expore" ? "scale-105" : ""}`}>
     {pathname === "/expore" ? <ExploreIcon sx={{ fontSize: 28 }} /> : <ExploreOutlinedIcon sx={{ fontSize: 28 }} />}
   </div>
   <span className={`text-[15px] tracking-wide whitespace-nowrap ${openSearch ? "hidden" : "opacity-0 group-hover:opacity-100"}`}>
@@ -212,7 +212,7 @@ export default function Sidebar() {
               {pathname === "/messages" ? <ChatIcon sx={{ fontSize: 28 }} /> : <ChatOutlinedIcon sx={{ fontSize: 28 }} />}
             </div>
             <span className={`text-[15px] tracking-wide whitespace-nowrap ${openSearch ? "hidden" : "opacity-0 group-hover:opacity-100"}`}>
-             Masseges
+             Messages
             </span>
           </Link>
 
@@ -227,7 +227,7 @@ export default function Sidebar() {
               {pathname === "/notifications" ? <FavoriteIcon sx={{ fontSize: 28 }} /> : <FavoriteBorderOutlinedIcon sx={{ fontSize: 28 }} />}
             </div>
             <span className={`text-[15px] tracking-wide whitespace-nowrap ${openSearch ? "hidden" : "opacity-0 group-hover:opacity-100"}`}>
-              Notofication
+              Notifications
             </span>
           </Link>
 

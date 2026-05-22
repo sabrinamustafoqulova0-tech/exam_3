@@ -4,8 +4,7 @@ import "../../globals.css";
 import { useLoginMutation } from "@/app/services/authApi";
 import { SaveToken } from "@/app/utils/token";
 import { useRouter } from "next/navigation";
-import VisibilityIcon from "@mui/icons-material/Visibility";
-import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
+import { Visibility as VisibilityIcon, VisibilityOff as VisibilityOffIcon } from "@mui/icons-material";
 
 const Login = () => {
   const router = useRouter();

@@ -3,8 +3,7 @@ import React, { useState } from "react";
 import "../../globals.css";
 import { useRegisterMutation } from "@/app/services/authApi";
 import { useRouter } from 'next/navigation';  
-import VisibilityIcon from "@mui/icons-material/Visibility";
-import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
+import { Visibility as VisibilityIcon, VisibilityOff as VisibilityOffIcon } from "@mui/icons-material";
 
 const Login = () => {
   const router = useRouter();
