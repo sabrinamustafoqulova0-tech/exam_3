@@ -199,8 +199,8 @@ export default function MyProfilePage() {
       
       <div className="max-w-[935px] mx-auto px-5 py-8">
         
-        {/* ХЕДЕР ПРОФИЛЯ (СТРОГО ОДИН В ОДИН) */}
-        <header className="flex flex-row items-start gap-10 md:gap-20 pb-11 border-b border-[#efefef] mb-0">
+        {/* ХЕДЕР ПРОФИЛЯ (СТРОГО ПО ИНСТАГРАМУ) */}
+        <header className="flex flex-row items-start gap-12 md:gap-24 pb-11 border-b border-[#efefef] mb-0">
           {/* Левая колонка - Аватар */}
           <div className="flex-shrink-0 md:w-[290px] flex justify-center">
             <div onClick={() => fileInputRef.current?.click()} className="relative group cursor-pointer w-[80px] h-[80px] sm:w-[150px] sm:h-[150px] rounded-full overflow-hidden border border-[#dbdbdb] bg-[#fafafa]">
@@ -213,7 +213,7 @@ export default function MyProfilePage() {
           </div>
 
           {/* Правая колонка - Инфо */}
-          <div className="flex-1 flex flex-col gap-4 pt-1">
+          <div className="flex-1 flex flex-col gap-5 pt-2">
             {/* Ряд 1: Username + Кнопки */}
             <div className="flex flex-wrap items-center gap-3">
               <h2 className="text-[20px] font-normal text-[#262626] mr-2">{user?.userName || 'username'}</h2>
@@ -231,7 +231,7 @@ export default function MyProfilePage() {
             </div>
 
             {/* Ряд 2: Статистика */}
-            <div className="flex items-center gap-7 text-[16px] text-[#262626]">
+            <div className="flex items-center gap-10 text-[16px] text-[#262626]">
               <div><span className="font-semibold">{postsList.length}</span> публикаций</div>
               <div onClick={() => setIsFollowersModalOpen(true)} className="cursor-pointer hover:opacity-70"><span className="font-semibold">{user?.subscribersCount ?? followersList.length}</span> подписчиков</div>
               <div onClick={() => setIsFollowingModalOpen(true)} className="cursor-pointer hover:opacity-70"><span className="font-semibold">{user?.subscriptionsCount ?? subscriptionsList.length}</span> подписок</div>
@@ -251,7 +251,7 @@ export default function MyProfilePage() {
           <button onClick={() => setActiveTab('saved')} className={`flex items-center gap-1.5 py-4 text-[12px] font-semibold tracking-widest uppercase border-t-[1px] -mt-[1px] bg-transparent cursor-pointer ${activeTab === 'saved' ? 'border-black text-black font-bold' : 'border-transparent text-[#8e8e8e]'}`}><Bookmark className="w-3 h-3" /> Сохранения</button>
         </div>
 
-        {/* СЕТКА ПОСТОВ */}
+        {/* СЕТКА ПОСТОВ (ЧИСТЫЙ INSTAGRAM STYLE) */}
         <div className="mt-2">
           {activePostsList.length > 0 ? (
             <div className="grid grid-cols-3 gap-1 md:gap-7">
@@ -295,7 +295,7 @@ export default function MyProfilePage() {
           </div>
         </Modal>
 
-        {/* МОДАЛКА ПРОСМОТРА ПОСТА (ОДИН В ОДИН КАК НА ВТОРОМ ФОТО) */}
+        {/* ПРОСМОТР ДЕТАЛЕЙ ПОСТА */}
         <Modal 
           open={isPostDetailsModalOpen} 
           onCancel={() => { setIsPostDetailsModalOpen(false); setSelectedPostId(null); }} 
@@ -303,52 +303,44 @@ export default function MyProfilePage() {
           closeIcon={<X className="text-white fixed right-4 top-4 w-6 h-6" />}
         >
           {currentPost && (
-            <div className="flex flex-col md:flex-row h-[85vh] md:h-[680px] bg-white overflow-hidden rounded-r-md rounded-l-md">
-              {/* ЛЕВАЯ ЧАСТЬ: Изображение с темным фоном (один в один) */}
-              <div className="w-full md:w-[60%] bg-black flex items-center justify-center h-[50%] md:h-full relative select-none">
+            <div className="flex flex-col md:flex-row h-[85vh] md:h-[650px] bg-white overflow-hidden rounded-md">
+              {/* Левая часть: Изображение */}
+              <div className="w-full md:w-[55%] bg-black flex items-center justify-center h-[45%] md:h-full">
                 <img 
                   src={currentPost?.images?.[0] ? (currentPost.images[0].startsWith('http') ? currentPost.images[0] : `${IMAGE_BASE_URL}/${currentPost.images[0]}`) : '/images/default-avatar.svg'}
                   alt="Post content" className="w-full h-full object-contain"
                 />
               </div>
 
-              {/* ПРАВАЯ ЧАСТЬ: Информация и скроллбары */}
-              <div className="w-full md:w-[40%] flex flex-col h-[50%] md:h-full bg-white text-black border-l border-[#efefef]">
-                {/* Хедер правой части: автор и корзина удаления */}
-                <div className="flex items-center justify-between p-4 border-b border-[#efefef] bg-white">
+              {/* Правая часть: Комментарии и информация */}
+              <div className="w-full md:w-[45%] flex flex-col h-[55%] md:h-full bg-white text-black">
+                {/* Хедер модалки */}
+                <div className="flex items-center justify-between p-4 border-b border-[#efefef]">
                   <div className="flex items-center gap-3">
-                    <Avatar src={avatarUrl} size="medium" className="border border-gray-200" />
-                    <span className="font-semibold text-[14px] text-black">{user?.userName}</span>
+                    <Avatar src={avatarUrl} size="small" />
+                    <span className="font-semibold text-[14px]">{user?.userName}</span>
                   </div>
-                  <button onClick={() => handleDeletePost(selectedPostId!)} className="text-gray-400 hover:text-red-500 bg-transparent border-none cursor-pointer p-1.5 rounded transition-colors flex items-center justify-center">
+                  <button onClick={() => handleDeletePost(selectedPostId!)} className="text-red-500 bg-transparent border-none cursor-pointer p-1 hover:bg-red-50 rounded transition-colors">
                     <Trash2 size={18} />
                   </button>
                 </div>
 
-                {/* Блок скролла комментариев */}
+                {/* Основной блок с прокруткой комментов */}
                 <div className="flex-1 p-4 overflow-y-auto space-y-4 bg-white text-[14px]">
-                  {/* Описание поста от автора */}
                   {currentPost?.content && (
                     <div className="flex gap-3 items-start pb-3 border-b border-[#fafafa]">
                       <Avatar src={avatarUrl} size="small" className="flex-shrink-0" />
-                      <div>
-                        <span className="font-semibold mr-2 text-black">{user?.userName}</span>
-                        <span className="text-[#262626] break-words">{currentPost.content}</span>
-                      </div>
+                      <div><span className="font-semibold mr-2">{user?.userName}</span><span className="text-[#262626]">{currentPost.content}</span></div>
                     </div>
                   )}
-
-                  {/* Списочек комментов */}
                   {currentPost?.comments?.map((comment: any) => {
                     const commentAuthor = comment.userName || 'User';
                     return (
                       <div key={comment.postCommentId} className="flex gap-3 items-start text-[13px] justify-between group">
                         <div className="flex gap-3 items-start flex-1">
-                          <div className="w-8 h-8 rounded-full bg-[#efefef] flex items-center justify-center font-bold text-gray-500 uppercase text-[11px] flex-shrink-0 border border-gray-150">
-                            {commentAuthor.charAt(0)}
-                          </div>
+                          <div className="w-7 h-7 rounded-full bg-[#efefef] flex items-center justify-center font-bold text-gray-500 uppercase text-[10px] flex-shrink-0">{commentAuthor.charAt(0)}</div>
                           <div className="flex-1">
-                            <span className="font-semibold mr-1.5 text-black">{commentAuthor}</span>
+                            <span className="font-semibold mr-1.5">{commentAuthor}</span>
                             <span className="text-gray-700 break-words">{comment.comment || ''}</span>
                           </div>
                         </div>
@@ -360,42 +352,29 @@ export default function MyProfilePage() {
                   })}
                 </div>
 
-                {/* Интерактив: кнопки лайков и каунтер */}
+                {/* Блок Лайков и иконок */}
                 <div className="p-4 border-t border-[#efefef] bg-white">
-                  <div className="flex items-center gap-4 mb-2.5">
-                    <button onClick={() => handleLikePost(selectedPostId!)} className="bg-transparent border-none p-0 cursor-pointer hover:opacity-75 transition-opacity">
+                  <div className="flex items-center gap-4 mb-2">
+                    <button onClick={() => handleLikePost(selectedPostId!)} className="bg-transparent border-none p-0 cursor-pointer hover:opacity-70">
                       <Heart size={24} className={likedPostIds[selectedPostId!] || currentPost?.postLike ? "text-red-500 fill-red-500" : "text-black"} />
                     </button>
-                    <MessageCircle size={24} className="text-black cursor-pointer hover:opacity-75 transition-opacity" />
-                    <Share2 size={24} className="text-black cursor-pointer hover:opacity-75 transition-opacity" />
+                    <MessageCircle size={24} className="text-black cursor-pointer hover:opacity-70" />
+                    <Share2 size={24} className="text-black cursor-pointer hover:opacity-70" />
                   </div>
-                  <div className="font-semibold text-[14px] text-black">{currentPost?.postLikeCount || 0} отметок «Нравится»</div>
+                  <div className="font-semibold text-[14px]">{currentPost?.postLikeCount || 0} отметок «Нравится»</div>
                 </div>
 
-                {/* Текстовое поле ввода комментария в самом низу */}
+                {/* Добавить комментарий */}
                 <div className="p-3 border-t border-[#efefef] flex items-center gap-2 bg-white">
-                  <Input 
-                    value={commentText} 
-                    onChange={(e) => setCommentText(e.target.value)} 
-                    placeholder="Добавьте комментарий..." 
-                    bordered={false} 
-                    className="flex-1 text-[14px] placeholder-gray-400 focus:bg-transparent" 
-                    onPressEnter={() => handleAddComment(selectedPostId!)} 
-                  />
-                  <button 
-                    onClick={() => handleAddComment(selectedPostId!)} 
-                    disabled={!commentText.trim()} 
-                    className="text-[#0095f6] font-semibold text-[14px] bg-transparent border-none cursor-pointer disabled:opacity-30 transition-opacity"
-                  >
-                    Опубликовать
-                  </button>
+                  <Input value={commentText} onChange={(e) => setCommentText(e.target.value)} placeholder="Добавьте комментарий..." bordered={false} className="flex-1 text-[14px]" onPressEnter={() => handleAddComment(selectedPostId!)} />
+                  <button onClick={() => handleAddComment(selectedPostId!)} disabled={!commentText.trim()} className="text-[#0095f6] font-semibold text-[14px] bg-transparent border-none cursor-pointer disabled:opacity-40">Опубликовать</button>
                 </div>
               </div>
             </div>
           )}
         </Modal>
 
-        {/* Остальные вспомогательные модалки */}
+        {/* Остальные модалки (Редактирование, добавление, подписчики) */}
         <Modal title="Редактировать профиль" open={isEditModalOpen} onOk={handleSaveProfile} onCancel={() => setIsEditModalOpen(false)} okText="Сохранить" cancelText="Отмена" centered>
           <div className="flex flex-col gap-4 pt-3">
             <div><span className="block text-[14px] font-semibold mb-1">О себе</span><TextArea rows={3} value={about} onChange={(e) => setAbout(e.target.value)} placeholder="Расскажите о себе..." /></div>
