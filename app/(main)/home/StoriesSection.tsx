@@ -214,12 +214,12 @@ const StoriesSection = () => {
                   transition-all duration-300
                   ${
                     isSeen
-                      ? "border border-gray-300 bg-transparent p-0"
-                      : "bg-gradient-to-tr from-[#fbc117] via-[#f02a64] to-[#b325ad] p-[3px]"
+                      ? "border-4 border-gray-400 bg-transparent p-0"
+                      : "border-4 border-red-500 bg-transparent p-0"
                   }
                 `}
               >
-                <div className={`w-full h-full rounded-full bg-white transition-all ${isSeen ? "p-0" : "p-[2px]"}`}>
+                <div className={`w-full h-full rounded-full bg-white transition-all p-0`}>
                   <div className="w-full h-full rounded-full overflow-hidden bg-gray-100">
                     <img
                       src={
