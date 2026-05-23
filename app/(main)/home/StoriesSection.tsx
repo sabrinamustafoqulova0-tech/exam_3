@@ -21,6 +21,30 @@ import {
 
 const STORY_DURATION = 5000;
 
+// Ключ для localStorage — хранит Set просмотренных storyId
+const SEEN_STORAGE_KEY = "seen_story_user_ids";
+
+// Читаем из localStorage список просмотренных userId
+const getPersistedSeenUserIds = (): Record<number, boolean> => {
+  try {
+    const raw = localStorage.getItem(SEEN_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+};
+
+// Сохраняем userId как просмотренный в localStorage
+const persistSeenUserId = (userId: number) => {
+  try {
+    const current = getPersistedSeenUserIds();
+    current[userId] = true;
+    localStorage.setItem(SEEN_STORAGE_KEY, JSON.stringify(current));
+  } catch {
+    // ignore
+  }
+};
+
 const StoriesSection = () => {
   const [likeStory] = useLikeStoryMutation();
   const [addStoryView] = useAddStoryViewMutation();
@@ -34,9 +58,12 @@ const StoriesSection = () => {
   const [replyText, setReplyText] = useState("");
   const [isMuted, setIsMuted] = useState(true);
 
-  // Возвращаем локальные стейты для мгновенного отклика интерфейса (Они синхронизируются с БД)
   const [likedStories, setLikedStories] = useState<Record<number, boolean>>({});
-  const [seenStories, setSeenStories] = useState<Record<number, boolean>>({});
+
+  // seenStories — объединяет localStorage + бэкенд (isViewed) + текущая сессия
+  const [seenStories, setSeenStories] = useState<Record<number, boolean>>(
+    () => getPersistedSeenUserIds()
+  );
 
   const { data: stories = [], isLoading } = useGetStoriesQuery({});
 
@@ -64,22 +91,24 @@ const StoriesSection = () => {
   const activeStories = activeUser?.stories?.filter((s: any) => s.fileName) ?? [];
   const activeStory = activeStories?.[activeStoryIndex];
 
-  // СИНХРОНИЗАЦИЯ ЛАЙКОВ (Если в стейте нет значения, берем дефолтное с бэкенда activeStory.isLiked)
-  const isLiked = activeStory 
-    ? (likedStories[activeStory.id] ?? !!activeStory.isLiked) 
+  // СИНХРОНИЗАЦИЯ ЛАЙКОВ
+  const isLiked = activeStory
+    ? (likedStories[activeStory.id] ?? !!activeStory.isLiked)
     : false;
 
   // Количество просмотров истории
-  const currentStoryViews = activeStory 
-    ? (viewCounts[activeStory.id] ?? activeStory.viewCount ?? 0) 
+  const currentStoryViews = activeStory
+    ? (viewCounts[activeStory.id] ?? activeStory.viewCount ?? 0)
     : 0;
 
-  // Функция фиксации просмотра (Мгновенно красит в серый)
+  // Пометить пользователя как просмотренного — локально + localStorage
   const markUserAsSeen = (userId: number) => {
-    setSeenStories((prev) => ({
-      ...prev,
-      [userId]: true,
-    }));
+    setSeenStories((prev) => {
+      if (prev[userId]) return prev; // уже помечен — не обновляем стейт
+      const updated = { ...prev, [userId]: true };
+      return updated;
+    });
+    persistSeenUserId(userId);
   };
 
   // НАВИГАЦИЯ: ВПЕРЕД
@@ -109,26 +138,28 @@ const StoriesSection = () => {
     }
   };
 
-  // ЭФФЕКТ ОТПРАВКИ ПРОСМОТРА (Swagger + Локальный стейт)
+  // ЭФФЕКТ ОТПРАВКИ ПРОСМОТРА
   useEffect(() => {
     if (!showStories || !activeStory?.id || !activeUser?.userId) return;
 
-    // 1. Мгновенно делаем кружок серым в интерфейсе (не дожидаясь ответа сервера)
+    // 1. Мгновенно помечаем как просмотренное (localStorage + стейт)
     markUserAsSeen(activeUser.userId);
 
-    // 2. Отправляем запрос в Swagger, чтобы сохранить просмотр в базу данных навсегда
+    // 2. Отправляем на сервер
     addStoryView(activeStory.id)
       .unwrap()
       .then((res: any) => {
+        // API возвращает { data: { id, viewUserId, storyId }, ... }
+        // viewCount не возвращается — инкрементируем локально
         setViewCounts((prev) => ({
           ...prev,
-          [activeStory.id]: res?.viewCount ?? (prev[activeStory.id] ?? activeStory.viewCount ?? 0) + 1,
+          [activeStory.id]: (prev[activeStory.id] ?? activeStory.viewCount ?? 0) + 1,
         }));
       })
       .catch((error) => {
-        console.error("Ошибка Swagger при добавлении просмотра:", error);
+        console.error("Ошибка при добавлении просмотра:", error);
       });
-  }, [activeStory?.id, showStories, activeUser?.userId, addStoryView]);
+  }, [activeStory?.id, showStories, activeUser?.userId]);
 
   // АВТОПЛЕЙ ТАЙМЕР
   useEffect(() => {
@@ -161,7 +192,7 @@ const StoriesSection = () => {
       {/* ЛЕНТА ИСТОРИЙ */}
       <div className="flex gap-4 px-4 py-4 overflow-x-auto bg-white border-b border-gray-200 select-none scrollbar-none">
         {groupedUsers.map((user: any, idx: number) => {
-          // ИСТОРИЯ СЕРАЯ: Если она просмотрена в текущей сессии ИЛИ если бэкенд говорит, что все сторис пользователя просмотрены (story.isViewed)
+          // Просмотрено: localStorage ИЛИ бэкенд (все сторис пользователя isViewed)
           const isBackendSeen = user.stories.every((story: any) => !!story.isViewed);
           const isSeen = seenStories[user.userId] || isBackendSeen;
 
@@ -214,7 +245,7 @@ const StoriesSection = () => {
       {/* МОДАЛКА ИСТОРИИ */}
       {showStories && activeStory && (
         <div className="fixed inset-0 z-50 bg-[#1a1a1a] flex items-center justify-center select-none p-0 md:p-6 overflow-hidden">
-          
+
           {/* ЗАДНИЙ ФОН С РАЗМЫТИЕМ */}
           <div className="absolute inset-0 z-0 hidden md:block opacity-50 blur-3xl scale-110 pointer-events-none">
             {activeStory.fileName?.match(/\.(mp4|webm|ogg)$/i) ? (
@@ -225,7 +256,7 @@ const StoriesSection = () => {
           </div>
 
           {/* КРЕСТИК ЗАКРЫТИЯ */}
-          <button 
+          <button
             onClick={() => setShowStories(false)}
             className="absolute top-4 right-4 z-40 text-white/80 hover:text-white transition focus:outline-none"
           >
@@ -234,7 +265,7 @@ const StoriesSection = () => {
 
           {/* ОСНОВНОЙ БЛОК */}
           <div className="relative z-10 flex items-center justify-center w-full max-w-[540px] h-full md:h-[95vh] max-h-[840px]">
-            
+
             {/* СТРЕЛКА НАЗАД */}
             {(activeStoryIndex > 0 || activeUserIndex > 0) && (
               <button
@@ -247,7 +278,7 @@ const StoriesSection = () => {
 
             {/* КОНТЕЙНЕР КАРТОЧКИ (9:16) */}
             <div className="relative w-[450px] h-full md:aspect-[9/16] bg-black md:rounded-lg overflow-hidden flex flex-col justify-between shadow-2xl">
-              
+
               {/* МЕДИА СТОРИС */}
               <div className="absolute inset-0 z-0 flex items-center justify-center bg-black">
                 {activeStory.fileName?.match(/\.(mp4|webm|ogg)$/i) ? (
@@ -268,10 +299,10 @@ const StoriesSection = () => {
                 )}
               </div>
 
-              {/* ХЕДЕР СТОРИС: СЕГМЕНТЫ И АВТОР */}
+              {/* ХЕДЕР СТОРИС */}
               <div className="relative z-20 w-full p-3 bg-gradient-to-b from-black/80 via-black/30 to-transparent pt-3">
                 <div className="flex gap-1 mb-3">
-                  {activeStories.map((_, index) => (
+                  {activeStories.map((_: any, index: number) => (
                     <div key={index} className="h-[2px] flex-1 bg-white/30 rounded-full overflow-hidden">
                       <div
                         className="h-full bg-white transition-all duration-300 ease-linear"
@@ -317,10 +348,9 @@ const StoriesSection = () => {
                 <div onClick={goNext} className="w-1/3 h-full" />
               </div>
 
-              {/* ПОДВАЛ: ИНПУТ + ПРОСМОТРЫ + КНОПКА ЛАЙКА */}
+              {/* ПОДВАЛ */}
               <div className="relative z-20 w-full p-4 bg-gradient-to-t from-black/70 via-black/10 to-transparent flex flex-col gap-2 pb-6 md:pb-4">
-                
-                {/* СЧЕТЧИК ИЗ БД/СТАЙТА */}
+
                 {currentStoryViews > 0 && (
                   <div className="flex items-center gap-1.5 text-white/90 text-[12px] font-medium pl-1 mb-0.5">
                     <RemoveRedEyeIcon sx={{ fontSize: 16 }} className="text-white/80" />
@@ -344,21 +374,17 @@ const StoriesSection = () => {
                   </div>
 
                   <div className="flex items-center gap-3.5 text-white">
-                    {/* КНОПКА ЛАЙКА (Мгновенно переключается локально + отправляет Swagger запрос) */}
                     <button
                       className="hover:scale-105 active:scale-95 transition-transform focus:outline-none"
                       onClick={async () => {
                         try {
-                          // Мгновенный визуальный отклик (toggle)
                           setLikedStories((prev) => ({
                             ...prev,
                             [activeStory.id]: !isLiked,
                           }));
-
-                          // Запрос к Swagger API
                           await likeStory(activeStory.id).unwrap();
                         } catch (err) {
-                          console.error("Ошибка при лайке сторис через Swagger:", err);
+                          console.error("Ошибка при лайке:", err);
                         }
                       }}
                     >
