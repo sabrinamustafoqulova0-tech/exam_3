@@ -206,35 +206,32 @@ const StoriesSection = () => {
               }}
               className="flex flex-col items-center gap-1.5 min-w-[72px] focus:outline-none"
             >
+              {/* БЛОК АВАТАРКИ В СТИЛЕ INSTAGRAM */}
               <div
                 className={`
-                  w-[69px] h-[69px]
-                  rounded-full
-                  flex items-center justify-center
-                  transition-all duration-300
+                  rounded-full p-[2.5px] transition-all duration-300
                   ${
                     isSeen
-                      ? "border-4 border-gray-400 bg-transparent p-0"
-                      : "border-4 border-red-500 bg-transparent p-0"
+                      ? "bg-gray-200" // Светло-серое кольцо для просмотренных историй
+                      : "bg-gradient-to-tr from-yellow-400 via-rose-500 to-fuchsia-600" // Градиент для новых
                   }
                 `}
               >
-                <div className={`w-full h-full rounded-full bg-white transition-all p-0`}>
-                  <div className="w-full h-full rounded-full overflow-hidden bg-gray-100">
-                    <img
-                      src={
-                        user.userAvatar
-                          ? `${Api}/images/${user.userAvatar}`
-                          : "https://cdn-icons-png.flaticon.com/512/149/149071.png"
-                      }
-                      className="w-full h-full object-cover"
-                      alt=""
-                    />
-                  </div>
+                {/* Белая окантовка (отступ между цветным/серым кольцом и самой фотографией) */}
+                <div className="w-[64px] h-[64px] rounded-full border-[2.5px] border-white bg-gray-100 overflow-hidden flex items-center justify-center">
+                  <img
+                    src={
+                      user.userAvatar
+                        ? `${Api}/images/${user.userAvatar}`
+                        : "https://cdn-icons-png.flaticon.com/512/149/149071.png"
+                    }
+                    className="w-full h-full object-cover"
+                    alt={user.userName}
+                  />
                 </div>
               </div>
 
-              <span className={`text-[12px] tracking-tight truncate w-[72px] text-center ${isSeen ? "text-gray-400" : "text-gray-800"}`}>
+              <span className={`text-[12px] tracking-tight truncate w-[72px] text-center ${isSeen ? "text-gray-500 font-normal" : "text-gray-900 font-medium"}`}>
                 {user.userName}
               </span>
             </button>
