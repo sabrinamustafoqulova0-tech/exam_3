@@ -9,34 +9,68 @@ import SendIcon from "@mui/icons-material/Send";
 import CloseIcon from "@mui/icons-material/Close";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
-import { useGetStoriesQuery, useLikeStoryMutation } from "@/app/services/home.store";
+import VolumeUpIcon from "@mui/icons-material/VolumeUp";
+import VolumeOffIcon from "@mui/icons-material/VolumeOff";
+import RemoveRedEyeIcon from "@mui/icons-material/RemoveRedEye";
+
+import {
+  useAddStoryViewMutation,
+  useGetStoriesQuery,
+  useLikeStoryMutation,
+} from "@/app/services/home.store";
 
 const STORY_DURATION = 5000;
 
+// Ключ для localStorage — хранит Set просмотренных storyId
+const SEEN_STORAGE_KEY = "seen_story_user_ids";
+
+// Читаем из localStorage список просмотренных userId
+const getPersistedSeenUserIds = (): Record<number, boolean> => {
+  try {
+    const raw = localStorage.getItem(SEEN_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+};
+
+// Сохраняем userId как просмотренный в localStorage
+const persistSeenUserId = (userId: number) => {
+  try {
+    const current = getPersistedSeenUserIds();
+    current[userId] = true;
+    localStorage.setItem(SEEN_STORAGE_KEY, JSON.stringify(current));
+  } catch {
+    // ignore
+  }
+};
+
 const StoriesSection = () => {
   const [likeStory] = useLikeStoryMutation();
+  const [addStoryView] = useAddStoryViewMutation();
 
   const [showStories, setShowStories] = useState(false);
+  const [viewCounts, setViewCounts] = useState<Record<number, number>>({});
 
   const [activeUserIndex, setActiveUserIndex] = useState(0);
   const [activeStoryIndex, setActiveStoryIndex] = useState(0);
 
   const [replyText, setReplyText] = useState("");
+  const [isMuted, setIsMuted] = useState(true);
 
-  // likes per story
-  const [likedStories, setLikedStories] = useState<
-    Record<number, boolean>
-  >({});
+  const [likedStories, setLikedStories] = useState<Record<number, boolean>>({});
 
-  const { data: stories = [], isLoading } =
-    useGetStoriesQuery({});
+  // seenStories — объединяет localStorage + бэкенд (isViewed) + текущая сессия
+  const [seenStories, setSeenStories] = useState<Record<number, boolean>>(
+    () => getPersistedSeenUserIds()
+  );
 
-  // GROUP USERS
+  const { data: stories = [], isLoading } = useGetStoriesQuery({});
+
+  // ГРУППИРОВКА СТОРИС ПО ПОЛЬЗОВАТЕЛЯМ
   const groupedUsers = useMemo(() => {
     return stories.reduce((acc: any[], story: any) => {
-      const existing = acc.find(
-        (u) => u.userId === story.userId
-      );
+      const existing = acc.find((u) => u.userId === story.userId);
 
       if (!existing) {
         acc.push({
@@ -54,30 +88,38 @@ const StoriesSection = () => {
   }, [stories]);
 
   const activeUser = groupedUsers[activeUserIndex];
+  const activeStories = activeUser?.stories?.filter((s: any) => s.fileName) ?? [];
+  const activeStory = activeStories?.[activeStoryIndex];
 
-  const activeStories =
-    activeUser?.stories?.filter(
-      (s: any) => s.fileName
-    ) ?? [];
+  // СИНХРОНИЗАЦИЯ ЛАЙКОВ
+  const isLiked = activeStory
+    ? (likedStories[activeStory.id] ?? !!activeStory.isLiked)
+    : false;
 
-  const activeStory =
-    activeStories?.[activeStoryIndex];
+  // Количество просмотров истории
+  const currentStoryViews = activeStory
+    ? (viewCounts[activeStory.id] ?? activeStory.viewCount ?? 0)
+    : 0;
 
-  // like state
-  const isLiked =
-    likedStories[activeStory?.id] ?? false;
+  // Пометить пользователя как просмотренного — локально + localStorage
+  const markUserAsSeen = (userId: number) => {
+    setSeenStories((prev) => {
+      if (prev[userId]) return prev; // уже помечен — не обновляем стейт
+      const updated = { ...prev, [userId]: true };
+      return updated;
+    });
+    persistSeenUserId(userId);
+  };
 
-  // NEXT
+  // НАВИГАЦИЯ: ВПЕРЕД
   const goNext = () => {
-    if (
-      activeStoryIndex <
-      activeStories.length - 1
-    ) {
+    if (activeUser?.userId) {
+      markUserAsSeen(activeUser.userId);
+    }
+
+    if (activeStoryIndex < activeStories.length - 1) {
       setActiveStoryIndex((prev) => prev + 1);
-    } else if (
-      activeUserIndex <
-      groupedUsers.length - 1
-    ) {
+    } else if (activeUserIndex < groupedUsers.length - 1) {
       setActiveUserIndex((prev) => prev + 1);
       setActiveStoryIndex(0);
     } else {
@@ -85,23 +127,41 @@ const StoriesSection = () => {
     }
   };
 
-  // PREV
+  // НАВИГАЦИЯ: НАЗАД
   const goPrev = () => {
     if (activeStoryIndex > 0) {
       setActiveStoryIndex((prev) => prev - 1);
     } else if (activeUserIndex > 0) {
-      const prevUser =
-        groupedUsers[activeUserIndex - 1];
-
+      const prevUser = groupedUsers[activeUserIndex - 1];
       setActiveUserIndex((prev) => prev - 1);
-
-      setActiveStoryIndex(
-        prevUser.stories.length - 1
-      );
+      setActiveStoryIndex(prevUser.stories.length - 1);
     }
   };
 
-  // AUTO PLAY
+  // ЭФФЕКТ ОТПРАВКИ ПРОСМОТРА
+  useEffect(() => {
+    if (!showStories || !activeStory?.id || !activeUser?.userId) return;
+
+    // 1. Мгновенно помечаем как просмотренное (localStorage + стейт)
+    markUserAsSeen(activeUser.userId);
+
+    // 2. Отправляем на сервер
+    addStoryView(activeStory.id)
+      .unwrap()
+      .then((res: any) => {
+        // API возвращает { data: { id, viewUserId, storyId }, ... }
+        // viewCount не возвращается — инкрементируем локально
+        setViewCounts((prev) => ({
+          ...prev,
+          [activeStory.id]: (prev[activeStory.id] ?? activeStory.viewCount ?? 0) + 1,
+        }));
+      })
+      .catch((error) => {
+        console.error("Ошибка при добавлении просмотра:", error);
+      });
+  }, [activeStory?.id, showStories, activeUser?.userId]);
+
+  // АВТОПЛЕЙ ТАЙМЕР
   useEffect(() => {
     if (!showStories) return;
 
@@ -110,21 +170,14 @@ const StoriesSection = () => {
     }, STORY_DURATION);
 
     return () => clearTimeout(timer);
-  }, [
-    showStories,
-    activeStoryIndex,
-    activeUserIndex,
-  ]);
+  }, [showStories, activeStoryIndex, activeUserIndex]);
 
   if (isLoading) {
     return (
-      <div className="flex gap-4 px-4 py-4 overflow-x-auto select-none bg-white border-b border-gray-100">
+      <div className="flex gap-4 px-4 py-4 overflow-x-auto select-none bg-white border-b border-gray-100 scrollbar-none">
         {[...Array(6)].map((_, i) => (
-          <div
-            key={i}
-            className="flex flex-col items-center animate-pulse"
-          >
-            <div className="w-[72px] h-[72px] rounded-full bg-gray-200" />
+          <div key={i} className="flex flex-col items-center animate-pulse">
+            <div className="w-[68px] h-[68px] rounded-full bg-gray-200" />
             <div className="w-14 h-2 bg-gray-200 rounded-full mt-2" />
           </div>
         ))}
@@ -136,222 +189,227 @@ const StoriesSection = () => {
 
   return (
     <>
-      {/* STORIES ROW */}
-      <div
-        className="flex gap-4 px-4 py-4 overflow-x-auto bg-white border-b border-gray-100 select-none
-        [&::-webkit-scrollbar]:hidden
-        [-ms-overflow-style:none]
-        [scrollbar-width:none]"
-      >
-        {groupedUsers.map((user: any, idx: number) => (
-          <button
-            key={user.userId}
-            onClick={() => {
-              setActiveUserIndex(idx);
-              setActiveStoryIndex(0);
-              setShowStories(true);
-            }}
-            className="flex flex-col items-center gap-1.5 min-w-[74px] group outline-none"
-          >
-            <div
-              className="
-                w-[74px] h-[74px]
-                rounded-full
-                bg-gradient-to-tr
-                from-[#f9ce34]
-                via-[#ee2a7b]
-                to-[#6228d7]
-                p-[2.5px]
-                flex items-center justify-center
-                transition-transform duration-200 active:scale-95 group-hover:scale-[1.02]
-              "
+      {/* ЛЕНТА ИСТОРИЙ */}
+      <div className="flex gap-4 px-4 py-4 overflow-x-auto bg-white border-b border-gray-200 select-none scrollbar-none">
+        {groupedUsers.map((user: any, idx: number) => {
+          // Просмотрено: localStorage ИЛИ бэкенд (все сторис пользователя isViewed)
+          const isBackendSeen = user.stories.every((story: any) => !!story.isViewed);
+          const isSeen = seenStories[user.userId] || isBackendSeen;
+
+          return (
+            <button
+              key={user.userId}
+              onClick={() => {
+                setActiveUserIndex(idx);
+                setActiveStoryIndex(0);
+                setShowStories(true);
+              }}
+              className="flex flex-col items-center gap-1.5 min-w-[72px] focus:outline-none"
             >
-              <div className="w-full h-full rounded-full bg-white p-[2px]">
-                <div className="w-full h-full rounded-full overflow-hidden bg-gray-100 border border-gray-200">
+              <div
+                className={`
+                  w-[69px] h-[69px]
+                  rounded-full
+                  flex items-center justify-center
+                  transition-all duration-300
+                  ${
+                    isSeen
+                      ? "border border-gray-300 bg-transparent p-0"
+                      : "bg-gradient-to-tr from-[#fbc117] via-[#f02a64] to-[#b325ad] p-[3px]"
+                  }
+                `}
+              >
+                <div className={`w-full h-full rounded-full bg-white transition-all ${isSeen ? "p-0" : "p-[2px]"}`}>
+                  <div className="w-full h-full rounded-full overflow-hidden bg-gray-100">
+                    <img
+                      src={
+                        user.userAvatar
+                          ? `${Api}/images/${user.userAvatar}`
+                          : "https://cdn-icons-png.flaticon.com/512/149/149071.png"
+                      }
+                      className="w-full h-full object-cover"
+                      alt=""
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <span className={`text-[12px] tracking-tight truncate w-[72px] text-center ${isSeen ? "text-gray-400" : "text-gray-800"}`}>
+                {user.userName}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* МОДАЛКА ИСТОРИИ */}
+      {showStories && activeStory && (
+        <div className="fixed inset-0 z-50 bg-[#1a1a1a] flex items-center justify-center select-none p-0 md:p-6 overflow-hidden">
+
+          {/* ЗАДНИЙ ФОН С РАЗМЫТИЕМ */}
+          <div className="absolute inset-0 z-0 hidden md:block opacity-50 blur-3xl scale-110 pointer-events-none">
+            {activeStory.fileName?.match(/\.(mp4|webm|ogg)$/i) ? (
+              <video src={`${Api}/images/${activeStory.fileName}`} className="w-full h-full object-cover" muted />
+            ) : (
+              <img src={`${Api}/images/${activeStory.fileName}`} className="w-full h-full object-cover" alt="" />
+            )}
+          </div>
+
+          {/* КРЕСТИК ЗАКРЫТИЯ */}
+          <button
+            onClick={() => setShowStories(false)}
+            className="absolute top-4 right-4 z-40 text-white/80 hover:text-white transition focus:outline-none"
+          >
+            <CloseIcon sx={{ fontSize: 28 }} />
+          </button>
+
+          {/* ОСНОВНОЙ БЛОК */}
+          <div className="relative z-10 flex items-center justify-center w-full max-w-[540px] h-full md:h-[95vh] max-h-[840px]">
+
+            {/* СТРЕЛКА НАЗАД */}
+            {(activeStoryIndex > 0 || activeUserIndex > 0) && (
+              <button
+                onClick={goPrev}
+                className="absolute left-[-56px] hidden md:flex items-center justify-center w-10 h-10 bg-white/20 hover:bg-white/30 backdrop-blur-md rounded-full text-white transition focus:outline-none"
+              >
+                <ChevronLeftIcon sx={{ fontSize: 28 }} />
+              </button>
+            )}
+
+            {/* КОНТЕЙНЕР КАРТОЧКИ (9:16) */}
+            <div className="relative w-[450px] h-full md:aspect-[9/16] bg-black md:rounded-lg overflow-hidden flex flex-col justify-between shadow-2xl">
+
+              {/* МЕДИА СТОРИС */}
+              <div className="absolute inset-0 z-0 flex items-center justify-center bg-black">
+                {activeStory.fileName?.match(/\.(mp4|webm|ogg)$/i) ? (
+                  <video
+                    src={`${Api}/images/${activeStory.fileName}`}
+                    className="w-full h-full object-cover"
+                    autoPlay
+                    muted={isMuted}
+                    loop
+                    playsInline
+                  />
+                ) : (
                   <img
-                    src={
-                      user.userAvatar
-                        ? `${Api}/images/${user.userAvatar}`
-                        : "https://cdn-icons-png.flaticon.com/512/149/149071.png"
-                    }
+                    src={`${Api}/images/${activeStory.fileName}`}
                     className="w-full h-full object-cover"
                     alt=""
                   />
-                </div>
-              </div>
-            </div>
-
-            <span className="text-[11px] font-normal tracking-wide text-gray-700 text-center truncate w-[74px]">
-              {user.userName}
-            </span>
-          </button>
-        ))}
-      </div>
-
-      {/* STORY MODAL */}
-      {showStories && activeStory && (
-        <div className="fixed inset-0 z-50 bg-[#1a1a1a] md:bg-black/95 flex items-center justify-center select-none backdrop-blur-md p-4">
-          {/* BLUR BG (Only for large screens) */}
-          <img
-            src={`${Api}/images/${activeStory.fileName}`}
-            className="hidden md:block absolute inset-0 w-full h-full object-cover blur-[60px] scale-110 opacity-30 pointer-events-none"
-            alt=""
-          />
-
-          {/* MAIN CONTAINER FOR INTERFACE (CARD + ARROWS) */}
-          <div className="relative flex items-center justify-center w-full max-w-[540px] h-full md:h-[92vh] md:max-h-[840px]">
-            
-            {/* LEFT NAVIGATION BUTTON (Visible on MD screens and up) */}
-            <button
-              onClick={goPrev}
-              className="hidden md:flex absolute -left-14 z-40 w-10 h-10 items-center justify-center rounded-full bg-white/10 hover:bg-white/20 active:scale-90 transition-all text-white/80 hover:text-white border border-white/10 backdrop-blur-sm cursor-pointer"
-            >
-              <ChevronLeftIcon className="text-[32px]" />
-            </button>
-
-            {/* CARD */}
-            <div className="relative w-full h-full md:w-[420px] rounded-xl overflow-hidden bg-black md:shadow-[0_0_40px_rgba(0,0,0,0.6)] flex flex-col justify-between">
-              
-              {/* IMAGE */}
-              <div className="absolute inset-0 z-0 flex items-center justify-center bg-black">
-                <img
-                  src={`${Api}/images/${activeStory.fileName}`}
-                  className="w-full h-full object-cover pointer-events-none"
-                  alt=""
-                />
+                )}
               </div>
 
-              {/* HEADER */}
-              <div className="absolute top-0 left-0 right-0 z-30 px-[11px] pt-3 pb-8 bg-gradient-to-b from-black/80 via-black/40 to-transparent">
-                {/* progress */}
-                <div className="flex gap-[3px] mb-3">
-                  {activeStories.map(
-                    (_: any, i: number) => (
+              {/* ХЕДЕР СТОРИС */}
+              <div className="relative z-20 w-full p-3 bg-gradient-to-b from-black/80 via-black/30 to-transparent pt-3">
+                <div className="flex gap-1 mb-3">
+                  {activeStories.map((_: any, index: number) => (
+                    <div key={index} className="h-[2px] flex-1 bg-white/30 rounded-full overflow-hidden">
                       <div
-                        key={i}
-                        className="flex-1 h-[2px] bg-white/30 rounded-full overflow-hidden"
-                      >
-                        <div
-                          className={`h-full bg-white rounded-full ${
-                            i < activeStoryIndex
-                              ? "w-full"
-                              : i === activeStoryIndex
-                              ? "animate-[progress_5s_linear_forwards]"
-                              : "w-0"
-                          }`}
-                        />
-                      </div>
-                    )
-                  )}
+                        className="h-full bg-white transition-all duration-300 ease-linear"
+                        style={{ width: index < activeStoryIndex ? "100%" : index === activeStoryIndex ? "100%" : "0%" }}
+                      />
+                    </div>
+                  ))}
                 </div>
 
-                {/* user row */}
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between text-white">
                   <div className="flex items-center gap-2.5">
-                    <div className="p-[1px] bg-white/20 rounded-full">
+                    <div className="w-8 h-8 rounded-full overflow-hidden border border-white/20 bg-gray-800">
                       <img
                         src={
                           activeUser.userAvatar
                             ? `${Api}/images/${activeUser.userAvatar}`
                             : "https://cdn-icons-png.flaticon.com/512/149/149071.png"
                         }
-                        className="w-8 h-8 rounded-full object-cover border border-black/10"
+                        className="w-full h-full object-cover"
                         alt=""
                       />
                     </div>
-
-                    <div className="flex items-center gap-2">
-                      <p className="text-white text-[14px] font-semibold tracking-wide hover:underline cursor-pointer">
-                        {activeUser.userName}
-                      </p>
-                      <span className="text-white/60 text-[13px] font-light">•</span>
-                      <p className="text-white/60 text-[13px] font-normal">
-                        {activeStory.createAt
-                          ? new Date(
-                              activeStory.createAt
-                            ).toLocaleDateString([], { month: 'short', day: 'numeric' })
-                          : "now"}
-                      </p>
-                    </div>
+                    <span className="font-semibold text-[14px]">{activeUser.userName}</span>
+                    <span className="text-[12px] text-white/60">1ч.</span>
                   </div>
 
-                  {/* CLOSE */}
-                  <button
-                    onClick={() =>
-                      setShowStories(false)
-                    }
-                    className="w-8 h-8 flex items-center justify-center rounded-full text-white/80 hover:text-white transition-colors duration-200"
-                  >
-                    <CloseIcon className="text-[26px]" />
-                  </button>
+                  {/* ЗВУК ДЛЯ ВИДЕО */}
+                  {activeStory.fileName?.match(/\.(mp4|webm|ogg)$/i) && (
+                    <button
+                      onClick={() => setIsMuted((prev) => !prev)}
+                      className="text-white/90 hover:text-white transition p-1 focus:outline-none"
+                    >
+                      {isMuted ? <VolumeOffIcon sx={{ fontSize: 22 }} /> : <VolumeUpIcon sx={{ fontSize: 22 }} />}
+                    </button>
+                  )}
                 </div>
               </div>
 
-              {/* INVISIBLE MOBILE TOUCH AREAS (Only handles click on mobile/tablets where arrows are hidden) */}
-              <button
-                onClick={goPrev}
-                className="absolute left-0 top-16 bottom-20 w-1/4 z-20 md:hidden outline-none appearance-none"
-              />
-              <button
-                onClick={goNext}
-                className="absolute right-0 top-16 bottom-20 w-1/4 z-20 md:hidden outline-none appearance-none"
-              />
+              {/* СЕНСОРНАЯ НАВИГАЦИЯ НА МОБИЛЬНЫХ */}
+              <div className="absolute inset-x-0 top-16 bottom-20 z-10 flex md:hidden">
+                <div onClick={goPrev} className="w-1/3 h-full" />
+                <div className="w-1/3 h-full pointer-events-none" />
+                <div onClick={goNext} className="w-1/3 h-full" />
+              </div>
 
-              {/* FOOTER */}
-              <div className="absolute bottom-0 left-0 right-0 z-30 p-[14px] pt-8 flex items-center gap-4 bg-gradient-to-t from-black/90 via-black/30 to-transparent">
-                <div className="flex-1 relative flex items-center">
-                  <input
-                    value={replyText}
-                    onChange={(e) =>
-                      setReplyText(e.target.value)
-                    }
-                    placeholder={`Ответьте пользователю ${activeUser.userName}...`}
-                    className="w-full bg-transparent border border-white/40 rounded-full pl-4 pr-10 py-[10px] text-white text-[14px] outline-none transition-all duration-200 placeholder:text-white/50 focus:border-white/70"
-                  />
-                </div>
+              {/* ПОДВАЛ */}
+              <div className="relative z-20 w-full p-4 bg-gradient-to-t from-black/70 via-black/10 to-transparent flex flex-col gap-2 pb-6 md:pb-4">
 
-                {/* ACTIONS */}
-                <div className="flex items-center gap-4">
-                  {/* LIKE */}
-                  <button
-                    className="text-white hover:scale-105 active:scale-90 transition-transform duration-150 outline-none"
-                    onClick={async () => {
-                      try {
-                        await likeStory(
-                          activeStory.id
-                        ).unwrap();
+                {currentStoryViews > 0 && (
+                  <div className="flex items-center gap-1.5 text-white/90 text-[12px] font-medium pl-1 mb-0.5">
+                    <RemoveRedEyeIcon sx={{ fontSize: 16 }} className="text-white/80" />
+                    <span>Просмотрено: {currentStoryViews}</span>
+                  </div>
+                )}
 
-                        setLikedStories((prev) => ({
-                          ...prev,
-                          [activeStory.id]:
-                            !prev[activeStory.id],
-                        }));
-                      } catch (err) {
-                        console.log(err);
-                      }
-                    }}
-                  >
-                    {isLiked ? (
-                      <FavoriteIcon className="text-[#ff3040] text-[26px] animate-[heartBeat_0.3s_ease-in-out]" />
-                    ) : (
-                      <FavoriteBorderIcon className="text-[26px]" />
+                <div className="w-full flex items-center gap-3.5">
+                  <div className="flex-1 relative flex items-center">
+                    <input
+                      value={replyText}
+                      onChange={(e) => setReplyText(e.target.value)}
+                      placeholder={`Reply to ${activeUser.userName}...`}
+                      className="w-full bg-transparent border border-white/40 rounded-full pl-5 pr-12 py-2 text-[14px] text-white placeholder-white/60 outline-none focus:border-white transition-colors"
+                    />
+                    {replyText && (
+                      <button className="absolute right-4 text-white font-semibold text-[14px] hover:text-sky-400">
+                        Send
+                      </button>
                     )}
-                  </button>
+                  </div>
 
-                  {/* SEND */}
-                  <button className="text-white hover:scale-105 active:scale-90 transition-transform duration-150 outline-none">
-                    <SendIcon className="text-[24px] -rotate-12 -translate-y-[2px]" />
-                  </button>
+                  <div className="flex items-center gap-3.5 text-white">
+                    <button
+                      className="hover:scale-105 active:scale-95 transition-transform focus:outline-none"
+                      onClick={async () => {
+                        try {
+                          setLikedStories((prev) => ({
+                            ...prev,
+                            [activeStory.id]: !isLiked,
+                          }));
+                          await likeStory(activeStory.id).unwrap();
+                        } catch (err) {
+                          console.error("Ошибка при лайке:", err);
+                        }
+                      }}
+                    >
+                      {isLiked ? (
+                        <FavoriteIcon className="text-[#ff3040]" fontSize="medium" />
+                      ) : (
+                        <FavoriteBorderIcon fontSize="medium" />
+                      )}
+                    </button>
+
+                    <button className="hover:scale-105 active:scale-95 transition-transform focus:outline-none rotate-[-20deg] mb-0.5">
+                      <SendIcon fontSize="medium" />
+                    </button>
+                  </div>
                 </div>
               </div>
+
             </div>
 
-            {/* RIGHT NAVIGATION BUTTON (Visible on MD screens and up) */}
+            {/* СТРЕЛКА ВПЕРЕД */}
             <button
               onClick={goNext}
-              className="hidden md:flex absolute -right-14 z-40 w-10 h-10 items-center justify-center rounded-full bg-white/10 hover:bg-white/20 active:scale-90 transition-all text-white/80 hover:text-white border border-white/10 backdrop-blur-sm cursor-pointer"
+              className="absolute right-[-56px] hidden md:flex items-center justify-center w-10 h-10 bg-white/20 hover:bg-white/30 backdrop-blur-md rounded-full text-white transition focus:outline-none"
             >
-              <ChevronRightIcon className="text-[32px]" />
+              <ChevronRightIcon sx={{ fontSize: 28 }} />
             </button>
 
           </div>

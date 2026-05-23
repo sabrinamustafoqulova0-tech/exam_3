@@ -778,5 +778,5 @@ export default function CreatePostPage() {
         </div>
       )}
     </div>
-  )
+  );
 }
