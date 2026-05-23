@@ -20,6 +20,7 @@ const Home = () => {
             <RightSidebar />
           </div>
         </div>
+
       </div>
     </div>
   );

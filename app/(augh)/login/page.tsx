@@ -4,8 +4,10 @@ import "../../globals.css";
 import { useLoginMutation } from "@/app/services/authApi";
 import { SaveToken } from "@/app/utils/token";
 import { useRouter } from "next/navigation";
-import VisibilityIcon from "@mui/icons-material/Visibility";
-import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
+import {
+  Visibility as VisibilityIcon,
+  VisibilityOff as VisibilityOffIcon,
+} from "@mui/icons-material";
 
 const Login = () => {
   const router = useRouter();
@@ -19,7 +21,6 @@ const Login = () => {
     e.preventDefault();
 
     try {
-     
       const res = await login({
         userName,
         password,
@@ -35,7 +36,6 @@ const Login = () => {
     }
   }
 
-  
   return (
     <div className="min-h-screen bg-white flex items-center justify-center px-4">
       <div className="flex gap-[150px] justify-center items-center gap-8">
@@ -45,17 +45,27 @@ const Login = () => {
             <p className="text-sm mb-4">Get the app.</p>
 
             <div className="flex items-center gap-4">
-              <img
-                className="h-10"
-                src="https://static.cdninstagram.com/rsrc.php/v3/yz/r/c5Rp7Ym-Klz.png"
-                alt="google play"
-              />
+              <a
+                href="https://play.google.com/store/apps/details?id=com.instagram.android&hl=ru"
+                target="_blank"
+              >
+                <img
+                  className="h-10"
+                  src="https://static.cdninstagram.com/rsrc.php/v3/yz/r/c5Rp7Ym-Klz.png"
+                  alt="google play"
+                />
+              </a>
 
-              <img
-                className="h-10 rounded-[10px]"
-                src="https://static.cdninstagram.com/rsrc.php/v3/yu/r/EHY6QnZYdNX.png"
-                alt="microsoft"
-              />
+              <a
+                href="https://apps.microsoft.com/detail/9NBLGGH5L9XT?hl=ru-ru&gl=TJ&ocid=pdpshare"
+                target="_blank"
+              >
+                <img
+                  className="h-10 rounded-[10px]"
+                  src="https://static.cdninstagram.com/rsrc.php/v3/yu/r/EHY6QnZYdNX.png"
+                  alt="microsoft"
+                />
+              </a>
             </div>
           </div>
         </div>
@@ -77,7 +87,6 @@ const Login = () => {
                 placeholder="UserName"
                 className="h-[38px] border border-gray-300 bg-[#fafafa] rounded-[3px] px-3 text-xs outline-none focus:border-gray-400"
               />
-
               <div className="relative">
                 <input
                   type={showPassword ? "text" : "password"}
@@ -99,7 +108,6 @@ const Login = () => {
                   )}
                 </button>
               </div>
-
               <button
                 disabled={isLoading}
                 type="submit"
@@ -107,7 +115,34 @@ const Login = () => {
               >
                 {isLoading ? "Loading..." : "Login"}
               </button>
-              {error && <p>Login error</p>}
+              {error && (
+                <div className="flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800 shadow-sm animate-fade-in">
+                  {/* Иконка предупреждения */}
+                  <svg
+                    className="h-5 w-5 shrink-0 text-red-500"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    strokeWidth="1.5"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"
+                    />
+                  </svg>
+
+                  <div>
+                    <h4 className="font-semibold text-red-900">
+                      Authentication Error
+                    </h4>
+                    <p className="mt-1 text-red-700 leading-relaxed">
+                      Incorrect username or password, or this account doesn't
+                      exist yet.
+                    </p>
+                  </div>
+                </div>
+              )}{" "}
             </form>
 
             <div className="flex items-center my-5">

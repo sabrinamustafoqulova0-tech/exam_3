@@ -1,8 +1,9 @@
 "use client";
 
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import {  useRef } from "react";
 
 // Icons for the main menu
 import HomeIcon from "@mui/icons-material/Home";
@@ -272,6 +273,7 @@ export default function Sidebar() {
               {pathname === "/notifications" ? <FavoriteIcon sx={{ fontSize: 28 }} /> : <FavoriteBorderOutlinedIcon sx={{ fontSize: 28 }} />}
             </div>
             <span className={`text-[15px] tracking-wide whitespace-nowrap ${openSearch ? "hidden" : "opacity-0 group-hover:opacity-100"}`}>
+              Notifications
               Notifications
             </span>
           </Link>
