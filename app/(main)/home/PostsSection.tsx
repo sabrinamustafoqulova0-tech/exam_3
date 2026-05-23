@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import BookmarkIcon from "@mui/icons-material/Bookmark";
 import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
 import FavoriteIcon from "@mui/icons-material/Favorite";
@@ -13,6 +13,8 @@ import VolumeUpIcon from "@mui/icons-material/VolumeUp";
 import RepeatIcon from "@mui/icons-material/Repeat";
 import AutorenewIcon from "@mui/icons-material/Autorenew";
 
+import { Swiper, SwiperSlide } from "swiper/react";
+import { Pagination } from "swiper/modules";
 import "swiper/css";
 import "swiper/css/pagination";
 
@@ -164,16 +166,32 @@ const CommentsModal = ({ post, onClose, getCurrentIndex, setPostIndex, toggleMut
   const [replyingTo, setReplyingTo] = useState<number | null>(null);
   const [replyText, setReplyText] = useState("");
   const [replies, setReplies] = useState<Record<number, any[]>>({});
+  const [expandedReplies, setExpandedReplies] = useState<number[]>([]);
+  const [modalLiked, setModalLiked] = useState<boolean>(!!post.postLike);
+  const [modalLikeCount, setModalLikeCount] = useState<number>(post.postLikeCount ?? 0);
+  const [modalSaved, setModalSaved] = useState<boolean>(!!post.postFavorite);
 
   const [addComment] = useAddCommentMutation();
+  const [likePost] = useLikePostMutation();
   const { data } = useGetUsersQuery(undefined);
   const users = data?.data || [];
 
   const handleSubmit = async () => {
     if (!text.trim()) return;
     await addComment({ postId: post.postId, text });
-    setComments((prev) => [...prev, { userName: "You", comment: text }]);
+    setComments((prev) => [...prev, { id: Date.now(), userName: "You", comment: text }]);
     setText("");
+  };
+
+  const handleReplySubmit = (commentId: number, atUser: string) => {
+    if (!replyText.trim()) return;
+    setReplies((prev) => ({
+      ...prev,
+      [commentId]: [...(prev[commentId] || []), { id: Date.now(), userName: "you", text: replyText }],
+    }));
+    setReplyText("");
+    setReplyingTo(null);
+    setExpandedReplies((prev) => prev.includes(commentId) ? prev : [...prev, commentId]);
   };
 
   const toggleLikeComment = (id: number) => {
@@ -187,19 +205,16 @@ const CommentsModal = ({ post, onClose, getCurrentIndex, setPostIndex, toggleMut
     }
   };
 
-  const submitReply = (commentId: number) => {
-    if (!replyText.trim()) return;
-    setReplies((prev) => ({
-      ...prev,
-      [commentId]: [...(prev[commentId] || []), { id: Date.now(), userName: "you", text: replyText }],
-    }));
-    setReplyText("");
-    setReplyingTo(null);
+  const handleModalLike = async () => {
+    setModalLiked((prev) => !prev);
+    setModalLikeCount((prev) => modalLiked ? Math.max(prev - 1, 0) : prev + 1);
+    try { await likePost(post.postId).unwrap(); } catch { setModalLiked((prev) => !prev); }
   };
 
   return (
     <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div className="bg-white w-full max-w-[1200px] h-[90vh] rounded-sm overflow-hidden flex relative" onClick={(e) => e.stopPropagation()}>
+        {/* LEFT: media */}
         <div className="flex-1 bg-black relative">
           {post.images?.length > 1 && (
             <>
@@ -216,34 +231,184 @@ const CommentsModal = ({ post, onClose, getCurrentIndex, setPostIndex, toggleMut
           </div>
         </div>
 
+        {/* RIGHT: comments panel */}
         <div className="w-[420px] flex flex-col bg-white">
-          <div className="flex items-center justify-between px-4 py-3 border-b">
+          {/* Header */}
+          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
             <div className="flex items-center gap-2">
               <img src={post.userImage ? `${Api}/images/${post.userImage}` : "https://cdn-icons-png.flaticon.com/512/149/149071.png"} className="w-8 h-8 rounded-full object-cover" alt="" />
-              <span className="font-semibold text-sm">{post.userName}</span>
+              <span className="font-semibold text-[13px]">{post.userName}</span>
             </div>
-            <MoreHorizIcon />
+            <MoreHorizIcon sx={{ fontSize: 20 }} />
           </div>
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+
+          {/* Comments list */}
+          <div className="flex-1 overflow-y-auto px-4 py-3 space-y-4">
             {post.description && (
-              <div className="text-sm"><span className="font-semibold mr-2">{post.userName}</span>{post.description}</div>
+              <div className="flex gap-3">
+                <img src={post.userImage ? `${Api}/images/${post.userImage}` : "https://cdn-icons-png.flaticon.com/512/149/149071.png"} className="w-8 h-8 rounded-full object-cover flex-shrink-0" alt="" />
+                <div className="flex-1">
+                  <div className="text-[13px] leading-[18px] break-words">
+                    <span className="font-semibold mr-2">{post.userName}</span>
+                    <span className="text-gray-800">{post.description}</span>
+                  </div>
+                </div>
+              </div>
             )}
+
             {comments.map((c: any, i: number) => {
-              const commentId = c.commentId || i;
+              const commentId = c.commentId ?? c.id ?? i;
               const user = users.find((el: any) => el.id === c.userId);
+              const isLikedC = likedComments.includes(commentId);
+              const cLikeCount = likesCount[commentId] ?? 0;
+              const cReplies = replies[commentId] || [];
+              const isExpanded = expandedReplies.includes(commentId);
+
               return (
-                <div key={commentId} className="flex gap-3 group">
-                  <img src={user?.avatar ? `${Api}/images/${user.avatar}` : "https://cdn-icons-png.flaticon.com/512/149/149071.png"} className="w-[32px] h-[32px] rounded-full object-cover" alt="" />
-                  <div className="flex-1">
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <div className="text-[14px] leading-[18px] break-words"><span className="font-semibold mr-2">{user?.userName || c.userName || "User"}</span>{c.comment || c.text}</div>
+                <div key={commentId}>
+                  {/* Main comment row */}
+                  <div className="flex gap-3 group">
+                    <img
+                      src={user?.avatar ? `${Api}/images/${user.avatar}` : "https://cdn-icons-png.flaticon.com/512/149/149071.png"}
+                      className="w-8 h-8 rounded-full object-cover flex-shrink-0"
+                      alt=""
+                    />
+                    <div className="flex-1 min-w-0">
+                      {/* Comment text */}
+                      <div className="text-[13px] leading-[18px] break-words">
+                        <span className="font-semibold mr-2">{user?.userName || c.userName || "User"}</span>
+                        <span className="text-gray-800">{c.comment || c.text}</span>
                       </div>
+                      {/* Meta row: time + Reply */}
+                      <div className="flex items-center gap-3 mt-1">
+                        <span className="text-[11px] text-gray-400">2h</span>
+                        {cLikeCount > 0 && (
+                          <span className="text-[11px] text-gray-400 font-semibold">{cLikeCount} likes</span>
+                        )}
+                        <button
+                          onClick={() => {
+                            setReplyingTo(replyingTo === commentId ? null : commentId);
+                            setReplyText("");
+                          }}
+                          className="text-[11px] font-semibold text-gray-400 hover:text-gray-700 transition-colors"
+                        >
+                          Reply
+                        </button>
+                      </div>
+
+                      {/* Show replies toggle */}
+                      {cReplies.length > 0 && (
+                        <button
+                          onClick={() => setExpandedReplies((prev) => isExpanded ? prev.filter((x) => x !== commentId) : [...prev, commentId])}
+                          className="flex items-center gap-2 mt-2 text-[12px] font-semibold text-gray-500 hover:text-gray-800 transition-colors"
+                        >
+                          <span className="inline-block w-6 h-[1px] bg-gray-400" />
+                          {isExpanded ? "Hide replies" : `View ${cReplies.length} ${cReplies.length === 1 ? "reply" : "replies"}`}
+                        </button>
+                      )}
+
+                      {/* Replies list */}
+                      {isExpanded && cReplies.map((r: any) => (
+                        <div key={r.id} className="flex gap-2 mt-3 ml-1">
+                          <img
+                            src="https://cdn-icons-png.flaticon.com/512/149/149071.png"
+                            className="w-6 h-6 rounded-full object-cover flex-shrink-0"
+                            alt=""
+                          />
+                          <div>
+                            <div className="text-[13px] leading-[17px] break-words">
+                              <span className="font-semibold mr-2">{r.userName}</span>
+                              <span className="text-gray-800">{r.text}</span>
+                            </div>
+                            <div className="flex items-center gap-3 mt-0.5">
+                              <span className="text-[11px] text-gray-400">just now</span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+
+                      {/* Reply input */}
+                      {replyingTo === commentId && (
+                        <div className="flex items-center gap-2 mt-2">
+                          <input
+                            autoFocus
+                            value={replyText}
+                            onChange={(e) => setReplyText(e.target.value)}
+                            onKeyDown={(e) => { if (e.key === "Enter") handleReplySubmit(commentId, user?.userName || c.userName || "User"); }}
+                            placeholder={`Reply to ${user?.userName || c.userName || "User"}...`}
+                            className="flex-1 text-[13px] outline-none border-b border-gray-300 focus:border-gray-600 py-1 bg-transparent placeholder:text-gray-400 transition-colors"
+                          />
+                          <button
+                            onClick={() => handleReplySubmit(commentId, user?.userName || c.userName || "User")}
+                            disabled={!replyText.trim()}
+                            className="text-[13px] font-semibold text-blue-500 disabled:opacity-40 transition-opacity"
+                          >
+                            Post
+                          </button>
+                        </div>
+                      )}
                     </div>
+
+                    {/* Like button for comment */}
+                    <button
+                      onClick={() => toggleLikeComment(commentId)}
+                      className="flex-shrink-0 self-start mt-0.5 transition-transform active:scale-75"
+                    >
+                      {isLikedC
+                        ? <FavoriteIcon sx={{ fontSize: 12 }} className="text-red-500" />
+                        : <FavoriteBorderIcon sx={{ fontSize: 12 }} className="text-gray-400" />}
+                    </button>
                   </div>
                 </div>
               );
             })}
+          </div>
+
+          {/* Post actions bar (Instagram style) */}
+          <div className="border-t border-gray-100 px-4 pt-3 pb-1">
+            <div className="flex justify-between items-center mb-1">
+              <div className="flex gap-4 items-center">
+                <button onClick={handleModalLike} className="hover:scale-105 active:scale-90 transition-transform">
+                  {modalLiked
+                    ? <FavoriteIcon sx={{ fontSize: 26 }} className="text-red-500" />
+                    : <FavoriteBorderIcon sx={{ fontSize: 26 }} className="text-gray-900" />}
+                </button>
+                <button className="hover:scale-105 active:scale-90 transition-transform text-gray-900">
+                  <ChatBubbleOutlineIcon sx={{ fontSize: 24 }} />
+                </button>
+              </div>
+              <button onClick={() => setModalSaved((s) => !s)} className="text-gray-900">
+                {modalSaved
+                  ? <BookmarkIcon sx={{ fontSize: 24 }} />
+                  : <BookmarkBorderIcon sx={{ fontSize: 24 }} />}
+              </button>
+            </div>
+            {modalLikeCount > 0 && (
+              <div className="text-[13px] font-semibold text-gray-900 mb-1">{modalLikeCount.toLocaleString()} likes</div>
+            )}
+          </div>
+
+          {/* Comment input */}
+          <div className="flex items-center gap-3 px-4 py-3 border-t border-gray-100">
+            <img
+              src="https://cdn-icons-png.flaticon.com/512/149/149071.png"
+              className="w-7 h-7 rounded-full object-cover flex-shrink-0"
+              alt=""
+            />
+            <input
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") handleSubmit(); }}
+              placeholder="Add a comment..."
+              className="flex-1 text-[13px] outline-none bg-transparent placeholder:text-gray-400"
+            />
+            <button
+              onClick={handleSubmit}
+              disabled={!text.trim()}
+              className="text-[13px] font-semibold text-blue-500 disabled:opacity-40 transition-opacity"
+            >
+              Post
+            </button>
           </div>
         </div>
       </div>
@@ -261,6 +426,7 @@ const PostsSection = () => {
   const [aboutPost, setAboutPost] = useState<any>(null);
   const [currentIndexes, setCurrentIndexes] = useState<Record<number, number>>({});
   const [mutedPosts, setMutedPosts] = useState<Record<number, boolean>>({});
+  const swiperRefs = useRef<Record<number, any>>({});
 
   // Лайки
   const [localLikes, setLocalLikes] = useState<Record<number, boolean>>({});
@@ -408,34 +574,23 @@ const PostsSection = () => {
                 </button>
               </div>
 
-              {/* 2. INSTAGRAM MEDIA FEED WITH ABSOLUTE POSITIONING NOTES */}
+              {/* 2. INSTAGRAM MEDIA FEED — SWIPER */}
               <div
-                onClick={() => setActivePost(post)}
                 className="relative aspect-square bg-gray-50 border border-gray-100 rounded-[4px] overflow-hidden cursor-pointer"
+                onClick={() => setActivePost(post)}
               >
-                {/* ИКОНКА ЗАМЕТКИ РЕПОСТА — СТРОГО ВНУТРИ КАРТИНКИ СЛЕВА ВНИЗУ */}
+                {/* Repost bubble */}
                 {userHasReposted && (
-                  <div 
-                    onClick={(e) => {
-                      e.stopPropagation(); // Чтобы не открывались комментарии
-                      handleRepostClick(post.postId); // Редактирование при клике на баббл
-                    }}
+                  <div
+                    onClick={(e) => { e.stopPropagation(); handleRepostClick(post.postId); }}
                     className="absolute bottom-4 left-4 z-20 flex flex-col items-start cursor-pointer group active:scale-95 transition-transform"
                   >
-                    {/* Текстовое облачко */}
                     <div className="bg-white/95 backdrop-blur-xs text-gray-800 text-[12px] font-normal px-3 py-1.5 rounded-2xl shadow-lg max-w-[140px] break-words relative mb-1.5 border border-gray-100/50 text-center flex items-center justify-center min-w-[60px]">
                       {currentRepostText}
-                      {/* Хвостик облачка */}
                       <div className="absolute top-full left-4 w-0 h-0 border-[5px] border-transparent border-t-white/95" />
                     </div>
-
-                    {/* Аватарка с фиолетовым значком репоста */}
                     <div className="relative ml-1">
-                      <img
-                        src="https://cdn-icons-png.flaticon.com/512/149/149071.png"
-                        className="w-[32px] h-[32px] rounded-full border-2 border-white object-cover shadow-md"
-                        alt="User profile"
-                      />
+                      <img src="https://cdn-icons-png.flaticon.com/512/149/149071.png" className="w-[32px] h-[32px] rounded-full border-2 border-white object-cover shadow-md" alt="" />
                       <div className="absolute -bottom-0.5 -right-0.5 bg-[#783bf2] text-white rounded-full w-4 h-4 flex items-center justify-center p-0.5 shadow-md">
                         <AutorenewIcon style={{ fontSize: 10 }} />
                       </div>
@@ -443,41 +598,65 @@ const PostsSection = () => {
                   </div>
                 )}
 
-                {post.images?.length > 1 && (
+                <Swiper
+                  modules={[Pagination]}
+                  pagination={{ clickable: true }}
+                  spaceBetween={0}
+                  slidesPerView={1}
+                  onSwiper={(swiper) => { swiperRefs.current[post.postId] = swiper; }}
+                  onSlideChange={(swiper) => setPostIndex(post.postId, swiper.activeIndex)}
+                  className="w-full h-full"
+                  style={{
+                    // @ts-ignore
+                    "--swiper-pagination-color": "#fff",
+                    "--swiper-pagination-bullet-inactive-color": "rgba(255,255,255,0.5)",
+                    "--swiper-pagination-bullet-inactive-opacity": "1",
+                    "--swiper-pagination-bullet-size": "5px",
+                    "--swiper-pagination-bullet-horizontal-gap": "2px",
+                  }}
+                >
+                  {(post.images ?? []).map((img: string, idx: number) => (
+                    <SwiperSlide key={idx} className="w-full h-full">
+                      <div className="relative w-full h-full">
+                        {img.match(/\.(mp4|webm|ogg)$/i) ? (
+                          <video
+                            src={`${Api}/images/${img}`}
+                            className="w-full h-full object-cover"
+                            muted={isMuted(post.postId)}
+                            autoPlay loop playsInline
+                          />
+                        ) : (
+                          <img src={`${Api}/images/${img}`} className="w-full h-full object-cover" alt="" />
+                        )}
+                        {img.match(/\.(mp4|webm|ogg)$/i) && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); toggleMute(post.postId); }}
+                            className="absolute bottom-3 right-3 bg-black/60 text-white rounded-full w-7 h-7 flex items-center justify-center z-10"
+                          >
+                            {isMuted(post.postId) ? <VolumeOffIcon style={{ fontSize: 15 }} /> : <VolumeUpIcon style={{ fontSize: 15 }} />}
+                          </button>
+                        )}
+                      </div>
+                    </SwiperSlide>
+                  ))}
+                </Swiper>
+
+                {/* Prev/Next buttons — only for multi-image posts */}
+                {(post.images?.length ?? 0) > 1 && (
                   <>
                     <button
-                      onClick={(e) => { e.stopPropagation(); setPostIndex(post.postId, getCurrentIndex(post.postId) === 0 ? post.images.length - 1 : getCurrentIndex(post.postId) - 1); }}
-                      className="absolute left-2 top-1/2 -translate-y-1/2 z-10 bg-black/50 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs"
-                    >❮</button>
+                      onClick={(e) => { e.stopPropagation(); swiperRefs.current[post.postId]?.slidePrev(); }}
+                      className="absolute left-2 top-1/2 -translate-y-1/2 z-20 bg-black/50 hover:bg-black/70 text-white w-7 h-7 rounded-full flex items-center justify-center text-sm transition-colors"
+                    >
+                      ❮
+                    </button>
                     <button
-                      onClick={(e) => { e.stopPropagation(); setPostIndex(post.postId, getCurrentIndex(post.postId) === post.images.length - 1 ? 0 : getCurrentIndex(post.postId) + 1); }}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 z-10 bg-black/50 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs"
-                    >❯</button>
+                      onClick={(e) => { e.stopPropagation(); swiperRefs.current[post.postId]?.slideNext(); }}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 z-20 bg-black/50 hover:bg-black/70 text-white w-7 h-7 rounded-full flex items-center justify-center text-sm transition-colors"
+                    >
+                      ❯
+                    </button>
                   </>
-                )}
-
-                {post.images?.[getCurrentIndex(post.postId)]?.match(/\.(mp4|webm|ogg)$/i) ? (
-                  <video
-                    src={`${Api}/images/${post.images[getCurrentIndex(post.postId)]}`}
-                    className="w-full h-full object-cover"
-                    muted={isMuted(post.postId)}
-                    autoPlay loop playsInline
-                  />
-                ) : (
-                  <img
-                    src={`${Api}/images/${post.images[getCurrentIndex(post.postId)]}`}
-                    className="w-full h-full object-cover"
-                    alt=""
-                  />
-                )}
-
-                {post.images?.[getCurrentIndex(post.postId)]?.match(/\.(mp4|webm|ogg)$/i) && (
-                  <button
-                    onClick={(e) => { e.stopPropagation(); toggleMute(post.postId); }}
-                    className="absolute bottom-3 right-3 bg-black/60 text-white rounded-full w-7 h-7 flex items-center justify-center"
-                  >
-                    {isMuted(post.postId) ? <VolumeOffIcon style={{ fontSize: 15 }} /> : <VolumeUpIcon style={{ fontSize: 15 }} />}
-                  </button>
                 )}
               </div>
 
