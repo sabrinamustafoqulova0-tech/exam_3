@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-:root {
+/* :root {
   --background: #ffffff;
   --foreground: #171717;
 }
@@ -26,7 +26,7 @@ body {
 }
 
 /* Custom Swiper Navigation Arrows */
-.swiper-button-next, .swiper-button-prev {
+/* .swiper-button-next, .swiper-button-prev {
   background-color: rgba(255, 255, 255, 0.9);
   color: #333 !important;
   width: 32px !important;
@@ -45,4 +45,4 @@ body {
 .swiper-pagination-bullet-active {
   background: #0095f6 !important;
   opacity: 1 !important;
-}
+} */ 

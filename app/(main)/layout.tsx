@@ -7,7 +7,7 @@ export default function MainLayout({
 }) {
   return (
     <div className="flex">
-      <Navbar />
+      <Navbar/>
       <div className="flex-1">{children}</div>
     </div>
   );

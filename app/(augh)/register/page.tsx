@@ -3,8 +3,10 @@ import React, { useState } from "react";
 import "../../globals.css";
 import { useRegisterMutation } from "@/app/services/authApi";
 import { useRouter } from "next/navigation";
-import VisibilityIcon from "@mui/icons-material/Visibility";
-import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
+import {
+  Visibility as VisibilityIcon,
+  VisibilityOff as VisibilityOffIcon,
+} from "@mui/icons-material";
 
 const Login = () => {
   const router = useRouter();
@@ -14,7 +16,6 @@ const Login = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-
   const [register, { isLoading, error }] = useRegisterMutation();
 
   async function handleRegister(e: any) {
@@ -45,17 +46,27 @@ const Login = () => {
             <p className="text-sm mb-4">Get the app.</p>
 
             <div className="flex items-center gap-4">
-              <img
-                className="h-10"
-                src="https://static.cdninstagram.com/rsrc.php/v3/yz/r/c5Rp7Ym-Klz.png"
-                alt="google play"
-              />
+              <a
+                href="https://play.google.com/store/apps/details?id=com.instagram.android&hl=ru"
+                target="_blank"
+              >
+                <img
+                  className="h-10"
+                  src="https://static.cdninstagram.com/rsrc.php/v3/yz/r/c5Rp7Ym-Klz.png"
+                  alt="google play"
+                />
+              </a>
 
-              <img
-                className="h-10 rounded-[10px]"
-                src="https://static.cdninstagram.com/rsrc.php/v3/yu/r/EHY6QnZYdNX.png"
-                alt="microsoft"
-              />
+              <a
+                href="https://apps.microsoft.com/detail/9NBLGGH5L9XT?hl=ru-ru&gl=TJ&ocid=pdpshare"
+                target="_blank"
+              >
+                <img
+                  className="h-10 rounded-[10px]"
+                  src="https://static.cdninstagram.com/rsrc.php/v3/yu/r/EHY6QnZYdNX.png"
+                  alt="microsoft"
+                />
+              </a>
             </div>
           </div>
         </div>
@@ -120,10 +131,6 @@ const Login = () => {
                   )}
                 </button>
               </div>
-              <p className="text-gray-500 text-[15px]">
-                By signing up, you agree to our Terms , Privacy Policy and
-                Cookies Policy .
-              </p>
 
               <button
                 disabled={isLoading}
@@ -132,10 +139,36 @@ const Login = () => {
               >
                 {isLoading ? "Loading..." : "Register"}
               </button>
-              {error && <p>Error</p>}
+              {error && (
+                <div className="flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800 shadow-sm animate-fade-in">
+                  {/* Иконка предупреждения */}
+                  <svg
+                    className="h-5 w-5 shrink-0 text-red-500"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    strokeWidth="1.5"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"
+                    />
+                  </svg>
+
+                  <div>
+                    <h4 className="font-semibold text-red-900">
+                      Authentication Error
+                    </h4>
+                    <p className="mt-1 text-red-700 leading-relaxed">
+                      Such a user already exists, please try using a different
+                      name.
+                    </p>
+                  </div>
+                </div>
+              )}
             </form>
           </div>
-
           <div className="w-[450px] border-2 border-gray-100  mt-3 py-5 text-center rounded-3xl">
             <p className="text-sm">
               Have an account?
