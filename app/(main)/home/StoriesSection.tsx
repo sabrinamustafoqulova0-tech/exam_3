@@ -246,7 +246,7 @@ const StoriesSection = () => {
             )}
 
             {/* КОНТЕЙНЕР КАРТОЧКИ (9:16) */}
-            <div className="relative w-full h-full md:aspect-[9/16] bg-black md:rounded-lg overflow-hidden flex flex-col justify-between shadow-2xl">
+            <div className="relative w-[450px] h-full md:aspect-[9/16] bg-black md:rounded-lg overflow-hidden flex flex-col justify-between shadow-2xl">
               
               {/* МЕДИА СТОРИС */}
               <div className="absolute inset-0 z-0 flex items-center justify-center bg-black">

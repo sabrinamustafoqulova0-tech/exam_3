@@ -9,25 +9,14 @@ import SendIcon from "@mui/icons-material/Send";
 import BookmarkBorderIcon from "@mui/icons-material/BookmarkBorder";
 import MoreHorizIcon from "@mui/icons-material/MoreHoriz";
 import CloseIcon from "@mui/icons-material/Close";
-import { Api, GetUserId } from "@/app/utils/token";
-import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
-import LocationPinIcon from "@mui/icons-material/LocationPin";
 import VolumeOffIcon from "@mui/icons-material/VolumeOff";
 import VolumeUpIcon from "@mui/icons-material/VolumeUp";
 
-import { Swiper, SwiperSlide } from "swiper/react";
-import { Navigation, Pagination } from "swiper/modules";
-
 import "swiper/css";
-import "swiper/css/navigation";
 import "swiper/css/pagination";
 
-import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
-import ChevronRightIcon from "@mui/icons-material/ChevronRight";
+import { Api, GetUserId } from "@/app/utils/token";
 
-import "swiper/css";
-import "swiper/css/navigation";
-import "swiper/css/pagination";
 import {
   useAddCommentMutation,
   useGetFollowingPostsQuery,
@@ -39,37 +28,177 @@ import {
   useGetSubscriptionsQuery,
 } from "@/app/services/publication.home";
 
-// ───────────────────── COMMENTS MODAL ─────────────────────
-const CommentsModal = ({
+// ─── POST MENU MODAL ────────────────────────────────────────────────────────
+
+const PostMenuModal = ({
+  post,
+  isFollowing,
+  isFavorite,
+  onClose,
+  onFollowToggle,
+  onFavoriteToggle,
+  onAbout,
+}: {
+  post: any;
+  isFollowing: boolean;
+  isFavorite: boolean;
+  onClose: () => void;
+  onFollowToggle: () => void;
+  onFavoriteToggle: () => void;
+  onAbout: () => void;
+}) => {
+  return (
+    <div
+      className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white w-full max-w-[400px] rounded-xl overflow-hidden mb-4 sm:mb-0"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Unfollow */}
+        <button
+          onClick={() => {
+            onFollowToggle();
+            onClose();
+          }}
+          className="w-full py-3.5 text-sm font-semibold text-red-500 border-b border-gray-100 hover:bg-gray-50 transition"
+        >
+          {isFollowing ? "Unfollow" : "Follow"}
+        </button>
+
+        {/* Add to Favorites */}
+        <button
+          onClick={() => {
+            onFavoriteToggle();
+            onClose();
+          }}
+          className="w-full py-3.5 text-sm font-semibold text-gray-800 border-b border-gray-100 hover:bg-gray-50 transition"
+        >
+          {isFavorite ? "Remove from Favorites" : "Add to Favorites"}
+        </button>
+
+        {/* About account */}
+        <button
+          onClick={() => {
+            onAbout();
+            onClose();
+          }}
+          className="w-full py-3.5 text-sm font-semibold text-gray-800 border-b border-gray-100 hover:bg-gray-50 transition"
+        >
+          About account
+        </button>
+
+        {/* Cancel */}
+        <button
+          onClick={onClose}
+          className="w-full py-3.5 text-sm text-gray-500 hover:bg-gray-50 transition"
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// ─── ABOUT ACCOUNT MODAL ────────────────────────────────────────────────────
+
+const AboutAccountModal = ({
   post,
   onClose,
 }: {
   post: any;
   onClose: () => void;
 }) => {
+  return (
+    <div
+      className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white w-full max-w-[360px] rounded-xl overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between px-4 py-3 border-b">
+          <span className="font-semibold text-sm">About this account</span>
+          <button onClick={onClose}>
+            <CloseIcon style={{ fontSize: 20 }} />
+          </button>
+        </div>
+
+        <div className="p-5 flex flex-col items-center gap-3">
+          <img
+            src={
+              post.userImage
+                ? `${Api}/images/${post.userImage}`
+                : "https://cdn-icons-png.flaticon.com/512/149/149071.png"
+            }
+            className="w-16 h-16 rounded-full object-cover"
+            alt=""
+          />
+          <span className="font-semibold text-base">{post.userName}</span>
+          {post.userEmail && (
+            <span className="text-sm text-gray-500">{post.userEmail}</span>
+          )}
+        </div>
+
+        <div className="px-5 pb-5">
+          <button
+            onClick={onClose}
+            className="w-full py-2.5 text-sm font-semibold text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ─── COMMENTS MODAL ─────────────────────────────────────────────────────────
+
+const CommentsModal = ({
+  post,
+  onClose,
+  getCurrentIndex,
+  setPostIndex,
+  toggleMute,
+  isMuted,
+}: {
+  post: any;
+  onClose: () => void;
+  getCurrentIndex: (postId: number) => number;
+  setPostIndex: (postId: number, index: number) => void;
+  toggleMute: (postId: number) => void;
+  isMuted: (postId: number) => boolean;
+}) => {
   const [text, setText] = useState("");
-  const [addComment] = useAddCommentMutation();
+  const [comments, setComments] = useState<any[]>(post.comments ?? []);
   const [likedComments, setLikedComments] = useState<number[]>([]);
   const [likesCount, setLikesCount] = useState<Record<number, number>>({});
   const [replyingTo, setReplyingTo] = useState<number | null>(null);
   const [replyText, setReplyText] = useState("");
   const [replies, setReplies] = useState<Record<number, any[]>>({});
-  const [comments, setComments] = useState<any[]>(post.comments ?? []);
+
+  const [addComment] = useAddCommentMutation();
+  const { data } = useGetUsersQuery(undefined);
+  const users = data?.data || [];
+
+  const handleSubmit = async () => {
+    if (!text.trim()) return;
+    await addComment({ postId: post.postId, text });
+    setComments((prev) => [...prev, { userName: "You", comment: text }]);
+    setText("");
+  };
 
   const toggleLikeComment = (id: number) => {
-    const isLiked = likedComments.includes(id);
-    if (isLiked) {
+    const liked = likedComments.includes(id);
+    if (liked) {
       setLikedComments((prev) => prev.filter((x) => x !== id));
-      setLikesCount((prev) => ({
-        ...prev,
-        [id]: Math.max((prev[id] || 1) - 1, 0),
-      }));
+      setLikesCount((prev) => ({ ...prev, [id]: Math.max((prev[id] || 1) - 1, 0) }));
     } else {
       setLikedComments((prev) => [...prev, id]);
-      setLikesCount((prev) => ({
-        ...prev,
-        [id]: (prev[id] || 0) + 1,
-      }));
+      setLikesCount((prev) => ({ ...prev, [id]: (prev[id] || 0) + 1 }));
     }
   };
 
@@ -86,263 +215,264 @@ const CommentsModal = ({
     setReplyingTo(null);
   };
 
-  const handleSubmit = async () => {
-    if (!text.trim()) return;
-    await addComment({ postId: post.postId, text });
-    setComments((prev) => [
-      ...prev,
-      {
-        userName: "You",
-        comment: text,
-        dateCommented: new Date().toISOString(),
-      },
-    ]);
-    setText("");
-  };
-
-  const { data } = useGetUsersQuery(undefined);
-  const users = data?.data || [];
-
   return (
     <div
-      className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 md:p-10 select-none backdrop-blur-sm"
+      className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4"
       onClick={onClose}
     >
       <div
-        className="bg-white w-full max-w-[85vw] xl:max-w-[1200px] h-[90vh] rounded-sm flex overflow-hidden relative shadow-2xl"
+        className="bg-white w-full max-w-[1200px] h-[90vh] rounded-sm overflow-hidden flex relative"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* IMAGE */}
-        <div className="hidden md:flex w-[55%] bg-black items-center justify-center border-r border-gray-100">
-          <img
-            src={`${Api}/images/${post.images}`}
-            className="w-full h-full object-contain max-h-full"
-            alt=""
-          />
+        {/* MEDIA */}
+        <div className="flex-1 bg-black relative">
+          {post.images?.length > 1 && (
+            <>
+              <button
+                onClick={() =>
+                  setPostIndex(
+                    post.postId,
+                    getCurrentIndex(post.postId) === 0
+                      ? post.images.length - 1
+                      : getCurrentIndex(post.postId) - 1,
+                  )
+                }
+                className="absolute left-3 top-1/2 -translate-y-1/2 z-10 bg-black/40 text-white w-7 h-7 rounded-full"
+              >
+                ❮
+              </button>
+              <button
+                onClick={() =>
+                  setPostIndex(
+                    post.postId,
+                    getCurrentIndex(post.postId) === post.images.length - 1
+                      ? 0
+                      : getCurrentIndex(post.postId) + 1,
+                  )
+                }
+                className="absolute right-3 top-1/2 -translate-y-1/2 z-10 bg-black/40 text-white w-7 h-7 rounded-full"
+              >
+                ❯
+              </button>
+            </>
+          )}
+
+          <div className="w-full h-full">
+            {post.images?.[getCurrentIndex(post.postId)]?.match(/\.(mp4|webm|ogg)$/i) ? (
+              <video
+                src={`${Api}/images/${post.images[getCurrentIndex(post.postId)]}`}
+                className="w-full h-full object-cover"
+                muted={isMuted(post.postId)}
+                autoPlay
+                loop
+                playsInline
+              />
+            ) : (
+              <img
+                src={`${Api}/images/${post.images[getCurrentIndex(post.postId)]}`}
+                className="w-full h-full object-cover"
+                alt=""
+              />
+            )}
+          </div>
+
+          {post.images?.length > 1 && (
+            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1">
+              {post.images.map((_: any, index: number) => (
+                <div
+                  key={index}
+                  className={`w-1.5 h-1.5 rounded-full ${
+                    getCurrentIndex(post.postId) === index ? "bg-white" : "bg-gray-400"
+                  }`}
+                />
+              ))}
+            </div>
+          )}
+
+          {post.images?.[getCurrentIndex(post.postId)]?.match(/\.(mp4|webm|ogg)$/i) && (
+            <button
+              onClick={() => toggleMute(post.postId)}
+              className="absolute bottom-3 right-3 bg-black/50 text-white rounded-full w-8 h-8 flex items-center justify-center"
+            >
+              {isMuted(post.postId) ? (
+                <VolumeOffIcon style={{ fontSize: 18 }} />
+              ) : (
+                <VolumeUpIcon style={{ fontSize: 18 }} />
+              )}
+            </button>
+          )}
         </div>
 
-        {/* COMMENTS */}
-        <div className="w-full md:w-[45%] flex flex-col bg-white">
-          {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3.5 border-b border-gray-100">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-100 border border-gray-200">
-                <img
-                  src={
-                    post.userImage
-                      ? `${Api}/images/${post.userImage}`
-                      : "https://cdn-icons-png.flaticon.com/512/149/149071.png"
-                  }
-                  className="w-full h-full object-cover"
-                  alt=""
-                />
-              </div>
-              <span className="font-semibold text-[14px] text-gray-900 cursor-pointer hover:text-gray-500 transition-colors">
-                {post.userName}
-              </span>
+        {/* COMMENTS PANEL */}
+        <div className="w-[420px] flex flex-col bg-white">
+          <div className="flex items-center justify-between px-4 py-3 border-b">
+            <div className="flex items-center gap-2">
+              <img
+                src={
+                  post.userImage
+                    ? `${Api}/images/${post.userImage}`
+                    : "https://cdn-icons-png.flaticon.com/512/149/149071.png"
+                }
+                className="w-8 h-8 rounded-full object-cover"
+                alt=""
+              />
+              <span className="font-semibold text-sm">{post.userName}</span>
             </div>
-            <button className="text-gray-900 hover:opacity-50 transition-opacity">
-              <MoreHorizIcon className="text-[20px]" />
-            </button>
+            <MoreHorizIcon />
           </div>
 
-          {/* Comments List */}
-          <div
-            className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-3.5 select-text
-            [&::-webkit-scrollbar]:w-1.5
-            [&::-webkit-scrollbar-thumb]:bg-gray-200
-            [&::-webkit-scrollbar-thumb]:rounded-full"
-          >
+          <div className="flex-1 overflow-y-auto p-4 space-y-4">
             {post.description && (
-              <div className="flex gap-2.5 items-start text-[14px] leading-[18px]">
-                <span className="font-semibold text-gray-900 cursor-pointer hover:text-gray-500 flex-shrink-0">
-                  {post.userName}:
-                </span>
-                <span className="text-gray-900 break-words">
-                  {post.description}
-                </span>
+              <div className="text-sm">
+                <span className="font-semibold mr-2">{post.userName}</span>
+                {post.description}
               </div>
             )}
 
-            {comments.length === 0 && !post.description ? (
-              <div className="flex flex-col items-center justify-center flex-1 py-10">
-                <p className="text-gray-900 text-[18px] font-bold mb-1">
-                  No comments yet.
-                </p>
-                <p className="text-gray-500 text-[14px]">
-                  Start the conversation.
-                </p>
-              </div>
-            ) : (
-              comments.map((c: any, i: number) => {
-                const commentId = c.commentId || i;
-                const user = users.find((el: any) => el.id === c.userId);
-                const isLiked = likedComments.includes(commentId);
+            {comments.map((c: any, i: number) => {
+              const commentId = c.commentId || i;
+              const user = users.find((el: any) => el.id === c.userId);
+              const isLiked = likedComments.includes(commentId);
 
-                return (
-                  <div key={commentId} className="flex gap-3 group">
-                    <img
-                      src={
-                        user?.avatar
-                          ? `${Api}/images/${user.avatar}`
-                          : "https://cdn-icons-png.flaticon.com/512/149/149071.png"
-                      }
-                      className="w-[32px] h-[32px] rounded-full object-cover"
-                      alt=""
-                    />
-                    <div className="flex-1">
-                      <div className="flex justify-between items-start">
-                        <div className="flex-1">
-                          <div className="text-[14px] leading-[18px]">
-                            <span className="font-semibold mr-2">
-                              {user?.userName || "User"}
-                            </span>
-                            <span>{c.comment || c.text}</span>
-                          </div>
-                          <div className="flex items-center gap-4 mt-1 text-[12px] text-gray-500">
-                            <span>{likesCount[commentId] || 0} likes</span>
+              return (
+                <div key={commentId} className="flex gap-3 group">
+                  <img
+                    src={
+                      user?.avatar
+                        ? `${Api}/images/${user.avatar}`
+                        : "https://cdn-icons-png.flaticon.com/512/149/149071.png"
+                    }
+                    className="w-[32px] h-[32px] rounded-full object-cover"
+                    alt=""
+                  />
+                  <div className="flex-1">
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1">
+                        <div className="text-[14px] leading-[18px] break-words">
+                          <span className="font-semibold mr-2">
+                            {user?.userName || c.userName || "User"}
+                          </span>
+                          <span>{c.comment || c.text}</span>
+                        </div>
+
+                        <div className="flex items-center gap-4 mt-1 text-[12px] text-gray-500">
+                          <span>{likesCount[commentId] || 0} likes</span>
+                          <button
+                            onClick={() =>
+                              setReplyingTo(replyingTo === commentId ? null : commentId)
+                            }
+                            className="font-semibold hover:text-black transition"
+                          >
+                            Reply
+                          </button>
+                        </div>
+
+                        {replyingTo === commentId && (
+                          <div className="mt-3 flex items-center gap-2">
+                            <input
+                              value={replyText}
+                              onChange={(e) => setReplyText(e.target.value)}
+                              placeholder="Reply..."
+                              className="flex-1 border-b border-gray-200 outline-none text-[13px] py-1 bg-transparent"
+                            />
                             <button
-                              onClick={() =>
-                                setReplyingTo(
-                                  replyingTo === commentId ? null : commentId,
-                                )
-                              }
-                              className="font-semibold hover:text-black"
+                              onClick={() => submitReply(commentId)}
+                              className="text-[#0095f6] font-semibold text-[13px]"
                             >
-                              Reply
+                              Post
                             </button>
                           </div>
-                          {replyingTo === commentId && (
-                            <div className="mt-3 flex items-center gap-2">
-                              <input
-                                value={replyText}
-                                onChange={(e) => setReplyText(e.target.value)}
-                                placeholder="Reply..."
-                                className="flex-1 border-b border-gray-200 outline-none text-[13px] py-1"
-                              />
-                              <button
-                                onClick={() => submitReply(commentId)}
-                                className="text-[#0095f6] font-semibold text-[13px]"
-                              >
-                                Post
-                              </button>
-                            </div>
-                          )}
-                          {replies[commentId]?.map((reply: any) => (
-                            <div
-                              key={reply.id}
-                              className="flex gap-2 mt-4 ml-3"
-                            >
-                              <img
-                                src="https://cdn-icons-png.flaticon.com/512/149/149071.png"
-                                className="w-[24px] h-[24px] rounded-full"
-                                alt=""
-                              />
-                              <div className="text-[13px]">
-                                <span className="font-semibold mr-2">
-                                  {reply.userName}
-                                </span>
-                                <span>{reply.text}</span>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                        <button
-                          onClick={() => toggleLikeComment(commentId)}
-                          className="mt-1"
-                        >
-                          {isLiked ? (
-                            <FavoriteIcon
-                              sx={{ fontSize: 15 }}
-                              className="text-[#ed4956]"
+                        )}
+
+                        {replies[commentId]?.map((reply: any) => (
+                          <div key={reply.id} className="flex gap-2 mt-4 ml-4">
+                            <img
+                              src="https://cdn-icons-png.flaticon.com/512/149/149071.png"
+                              className="w-[24px] h-[24px] rounded-full object-cover"
+                              alt=""
                             />
-                          ) : (
-                            <FavoriteBorderIcon sx={{ fontSize: 15 }} />
-                          )}
-                        </button>
+                            <div className="text-[13px] break-words">
+                              <span className="font-semibold mr-2">{reply.userName}</span>
+                              <span>{reply.text}</span>
+                            </div>
+                          </div>
+                        ))}
                       </div>
+
+                      <button
+                        onClick={() => toggleLikeComment(commentId)}
+                        className="mt-1 hover:scale-110 transition"
+                      >
+                        {isLiked ? (
+                          <FavoriteIcon sx={{ fontSize: 15 }} className="text-[#ed4956]" />
+                        ) : (
+                          <FavoriteBorderIcon sx={{ fontSize: 15 }} />
+                        )}
+                      </button>
                     </div>
                   </div>
-                );
-              })
-            )}
+                </div>
+              );
+            })}
           </div>
 
-          {/* Comment Input Footer */}
-          <div className="border-t border-gray-100 px-4 py-3.5 flex items-center gap-3 bg-white">
+          <div className="border-t p-4 flex items-center gap-3">
             <input
               value={text}
               onChange={(e) => setText(e.target.value)}
-              className="flex-1 outline-none text-[14px] text-gray-900 placeholder:text-gray-400 bg-transparent"
               placeholder="Add a comment..."
+              className="flex-1 outline-none text-sm"
             />
             <button
               onClick={handleSubmit}
-              disabled={!text.trim()}
-              className="text-[#0095f6] hover:text-[#00376b] font-semibold text-[14px] disabled:opacity-30 transition-colors duration-150"
+              className="text-[#0095f6] font-semibold text-sm"
             >
               Post
             </button>
           </div>
         </div>
 
-        {/* External Close Button */}
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 md:fixed md:top-5 md:right-5 text-white/80 hover:text-white transition-colors duration-200 z-50"
-        >
-          <CloseIcon className="text-[28px] md:text-[32px]" />
+        <button onClick={onClose} className="absolute top-4 right-4 text-white">
+          <CloseIcon />
         </button>
       </div>
     </div>
   );
 };
 
-// ───────────────────── POSTS SECTION ─────────────────────
+// ─── POSTS SECTION ──────────────────────────────────────────────────────────
 
 const PostsSection = () => {
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [muted, setMuted] = useState(true);
   const userID: any = GetUserId();
+
+  const [activePost, setActivePost] = useState<any>(null);
+  const [favorites, setFavorites] = useState<number[]>([]);
+  const [menuPost, setMenuPost] = useState<any>(null);
+  const [aboutPost, setAboutPost] = useState<any>(null);
+  const [currentIndexes, setCurrentIndexes] = useState<Record<number, number>>({});
+  const [mutedPosts, setMutedPosts] = useState<Record<number, boolean>>({});
+
   const [likePost] = useLikePostMutation();
   const [favoritePost] = useFavoritePostMutation();
   const [followUser] = useFollowUserMutation();
   const [unfollowUser] = useDeletellowUserMutation();
-  const [currentIndexes, setCurrentIndexes] = useState<Record<number, number>>(
-    {},
-  );
-  const [mutedPosts, setMutedPosts] = useState<Record<number, boolean>>({});
-
-  const [activePost, setActivePost] = useState<any>(null);
-  const [menuPostId, setMenuPostId] = useState<number | null>(null);
-  const [aboutPost, setAboutPost] = useState<any>(null);
-  const [favorites, setFavorites] = useState<number[]>([]);
 
   const { data: posts = [], isLoading } = useGetFollowingPostsQuery(userID);
   const { data: subscriptionsData } = useGetSubscriptionsQuery(userID);
-
   const subscriptions = subscriptionsData?.data ?? [];
 
   const isFollowing = (userId: string) => {
-    if (!Array.isArray(subscriptions)) return false;
-    const targetId = String(userId).toLowerCase().trim();
-    return subscriptions.some((sub: any) => {
-      const subUserId = String(sub.userShortInfo?.userId ?? "")
-        .toLowerCase()
-        .trim();
-      return subUserId === targetId;
-    });
+    return subscriptions.some(
+      (sub: any) =>
+        sub.userShortInfo?.userId?.toLowerCase() === userId?.toLowerCase(),
+    );
   };
 
   const handleFollowToggle = async (userId: string) => {
-    try {
-      if (isFollowing(userId)) {
-        await unfollowUser(userId).unwrap();
-      } else {
-        await followUser(userId).unwrap();
-      }
-    } catch (error) {
-      console.error("Follow toggle error:", error);
+    if (isFollowing(userId)) {
+      await unfollowUser(userId);
+    } else {
+      await followUser(userId);
     }
   };
 
@@ -357,221 +487,132 @@ const PostsSection = () => {
   const toggleFavorite = async (postId: number) => {
     await favoritePost(postId);
     setFavorites((prev) =>
-      prev.includes(postId)
-        ? prev.filter((id) => id !== postId)
-        : [...prev, postId],
+      prev.includes(postId) ? prev.filter((id) => id !== postId) : [...prev, postId],
     );
+  };
+
+  const getCurrentIndex = (postId: number) => currentIndexes[postId] ?? 0;
+
+  const setPostIndex = (postId: number, index: number) => {
+    setCurrentIndexes((prev) => ({ ...prev, [postId]: index }));
+  };
+
+  const isMuted = (postId: number) => mutedPosts[postId] ?? true;
+
+  const toggleMute = (postId: number) => {
+    setMutedPosts((prev) => ({ ...prev, [postId]: !prev[postId] }));
   };
 
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center h-[50vh] text-gray-400 text-sm tracking-wide">
-        <div className="animate-pulse">Loading posts...</div>
-      </div>
+      <div className="h-screen flex items-center justify-center">Loading...</div>
     );
   }
 
-  const getCurrentIndex = (postId: number) => {
-    return currentIndexes[postId] ?? 0;
-  };
-
-  const setPostIndex = (postId: number, index: number) => {
-    setCurrentIndexes((prev) => ({
-      ...prev,
-      [postId]: index,
-    }));
-  };
-
-  const isMuted = (postId: number) => {
-    return mutedPosts[postId] ?? true;
-  };
-
-  const toggleMute = (postId: number) => {
-    setMutedPosts((prev) => ({
-      ...prev,
-      [postId]: !prev[postId],
-    }));
-  };
   return (
     <>
-      <div className="w-full flex flex-col items-center pt-4 pb-20 px-4 select-none min-h-screen">
+      <div className="w-full flex flex-col items-center pt-4 pb-20 px-4">
         {posts.map((post: any) => (
           <div
             key={post.postId}
-            className="w-full max-w-[468px] border-b border-gray-200 mb-4 pb-5 bg-white"
+            className="w-full max-w-[468px] mb-6 border-b border-gray-200 pb-5"
           >
             {/* HEADER */}
-            <div className="flex justify-between items-center py-2.5 px-0.5">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-100 border border-gray-200 cursor-pointer">
-                  <img
-                    src={
-                      post.userImage
-                        ? `${Api}/images/${post.userImage}`
-                        : "https://cdn-icons-png.flaticon.com/512/149/149071.png"
-                    }
-                    className="w-full h-full object-cover"
-                    alt=""
-                  />
-                </div>
-                <span className="text-[14px] font-semibold text-gray-900 hover:text-gray-500 cursor-pointer transition-colors">
-                  {post.userName}
-                </span>
+            <div className="flex justify-between items-center py-3">
+              <div className="flex items-center gap-3">
+                <img
+                  src={
+                    post.userImage
+                      ? `${Api}/images/${post.userImage}`
+                      : "https://cdn-icons-png.flaticon.com/512/149/149071.png"
+                  }
+                  className="w-8 h-8 rounded-full object-cover"
+                  alt=""
+                />
+                <span className="font-semibold text-sm">{post.userName}</span>
               </div>
-              <button
-                onClick={() => setMenuPostId(post.postId)}
-                className="text-gray-900 hover:opacity-50 transition-opacity"
-              >
-                <MoreHorizIcon className="text-[22px]" />
+
+              {/* THREE DOTS → open menu modal */}
+              <button onClick={() => setMenuPost(post)}>
+                <MoreHorizIcon />
               </button>
             </div>
 
-            {/* IMAGE */}
-            <div className="w-full rounded-sm overflow-hidden border border-gray-100 bg-black aspect-square relative group">
+            {/* MEDIA */}
+            <div
+              onClick={() => setActivePost(post)}
+              className="relative aspect-square bg-black rounded-sm overflow-hidden cursor-pointer"
+            >
               {post.images?.length > 1 && (
                 <>
-                  {/* Left */}
                   <button
-                    onClick={() =>
-                      setCurrentIndex((prev) =>
-                        prev === 0 ? post.images.length - 1 : prev - 1,
-                      )
-                    }
-                    className="absolute left-2 top-1/2 -translate-y-1/2 z-10 bg-black/40 text-white w-6 h-6 rounded-full flex items-center justify-center text-sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setPostIndex(
+                        post.postId,
+                        getCurrentIndex(post.postId) === 0
+                          ? post.images.length - 1
+                          : getCurrentIndex(post.postId) - 1,
+                      );
+                    }}
+                    className="absolute left-2 top-1/2 -translate-y-1/2 z-10 bg-black/40 text-white w-6 h-6 rounded-full"
                   >
                     ❮
                   </button>
-
-                  {/* Right */}
                   <button
-                    onClick={() =>
-                      setCurrentIndex((prev) =>
-                        prev === post.images.length - 1 ? 0 : prev + 1,
-                      )
-                    }
-                    className="absolute right-2 top-1/2 -translate-y-1/2 z-10 bg-black/40 text-white w-6 h-6 rounded-full flex items-center justify-center text-sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setPostIndex(
+                        post.postId,
+                        getCurrentIndex(post.postId) === post.images.length - 1
+                          ? 0
+                          : getCurrentIndex(post.postId) + 1,
+                      );
+                    }}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 z-10 bg-black/40 text-white w-6 h-6 rounded-full"
                   >
                     ❯
                   </button>
                 </>
               )}
 
-              {/* IMAGE / VIDEO */}
-              {/* SWIPER */}
-              <div className="w-full rounded-sm overflow-hidden bg-black aspect-square relative">
-                {/* ARROWS */}
-                {post.images?.length > 1 && (
-                  <>
-                    {/* LEFT */}
-                    <button
-                      onClick={() =>
-                        setPostIndex(
-                          post.postId,
-                          getCurrentIndex(post.postId) === 0
-                            ? post.images.length - 1
-                            : getCurrentIndex(post.postId) - 1,
-                        )
-                      }
-                      className="absolute left-2 top-1/2 -translate-y-1/2 z-10 bg-black/30 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs"
-                    >
-                      ❮
-                    </button>
+              {post.images?.[getCurrentIndex(post.postId)]?.match(/\.(mp4|webm|ogg)$/i) ? (
+                <video
+                  src={`${Api}/images/${post.images[getCurrentIndex(post.postId)]}`}
+                  className="w-full h-full object-cover"
+                  muted={isMuted(post.postId)}
+                  autoPlay
+                  loop
+                  playsInline
+                />
+              ) : (
+                <img
+                  src={`${Api}/images/${post.images[getCurrentIndex(post.postId)]}`}
+                  className="w-full h-full object-cover"
+                  alt=""
+                />
+              )}
 
-                    {/* RIGHT */}
-                    <button
-                      onClick={() =>
-                        setPostIndex(
-                          post.postId,
-                          getCurrentIndex(post.postId) ===
-                            post.images.length - 1
-                            ? 0
-                            : getCurrentIndex(post.postId) + 1,
-                        )
-                      }
-                      className="absolute right-2 top-1/2 -translate-y-1/2 z-10 bg-black/30 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs"
-                    >
-                      ❯
-                    </button>
-                  </>
-                )}
-
-                {/* MEDIA */}
-                <div className="relative w-full h-full">
-                  {post.images?.[getCurrentIndex(post.postId)]?.match(
-                    /\.(mp4|webm|ogg)$/i,
-                  ) ? (
-                    <video
-                      src={`${Api}/images/${post.images[getCurrentIndex(post.postId)]}`}
-                      className="w-full h-full object-cover"
-                      muted={isMuted(post.postId)}
-                      autoPlay
-                      loop
-                      playsInline
-                    />
-                  ) : (
-                    <img
-                      src={`${Api}/images/${post.images[getCurrentIndex(post.postId)]}`}
-                      className="w-full h-full object-cover"
-                      alt=""
-                    />
-                  )}
-
-                  {/* 🔥 HERE — BUTTON MUST GO HERE */}
-                  
-                </div>
-
-                {/* DOTS */}
-                {post.images?.length > 1 && (
-                  <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1 z-10">
-                    {post.images.map((_: any, index: number) => (
-                      <div
-                        key={index}
-                        className={`w-1.5 h-1.5 rounded-full transition-all ${
-                          getCurrentIndex(post.postId) === index
-                            ? "bg-white"
-                            : "bg-gray-400/70"
-                        }`}
-                      />
-                    ))}
-                  </div>
-                )}
-
-                {/* SOUND BUTTON */}
-                {post.images?.[getCurrentIndex(post.postId)]?.match(
-                  /\.(mp4|webm|ogg)$/i,
-                ) && (
-                  <button
-                    onClick={() => toggleMute(post.postId)}
-                    className="absolute bottom-3 right-3 z-10 bg-black/50 backdrop-blur-sm text-white rounded-full w-8 h-8 flex items-center justify-center"
-                  >
-                    {getCurrentIndex(post.postId) ? (
-                      <VolumeOffIcon style={{ fontSize: 18 }} />
-                    ) : (
-                      <VolumeUpIcon style={{ fontSize: 18 }} />
-                    )}
-                  </button>
-                )}
-              </div>
-
-              {/* Dots */}
               {post.images?.length > 1 && (
-                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1 z-10">
+                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1">
                   {post.images.map((_: any, index: number) => (
                     <div
                       key={index}
                       className={`w-1.5 h-1.5 rounded-full ${
-                        currentIndex === index ? "bg-white" : "bg-gray-400/70"
+                        getCurrentIndex(post.postId) === index ? "bg-white" : "bg-gray-400"
                       }`}
                     />
                   ))}
                 </div>
               )}
 
-              {/* Sound Button */}
-              {post.images?.[currentIndex]?.match(/\.(mp4|webm|ogg)$/i) && (
+              {post.images?.[getCurrentIndex(post.postId)]?.match(/\.(mp4|webm|ogg)$/i) && (
                 <button
-                  onClick={() => toggleMute(post.postId)}
-                  className="absolute bottom-3 right-3 z-10 bg-black/50 text-white rounded-full w-8 h-8 flex items-center justify-center"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleMute(post.postId);
+                  }}
+                  className="absolute bottom-3 right-3 bg-black/50 text-white rounded-full w-8 h-8 flex items-center justify-center"
                 >
                   {isMuted(post.postId) ? (
                     <VolumeOffIcon style={{ fontSize: 18 }} />
@@ -583,60 +624,34 @@ const PostsSection = () => {
             </div>
 
             {/* ACTIONS */}
-            <div className="flex justify-between items-center py-3 px-0.5">
-              <div className="flex gap-4 items-center">
-                {/* LIKE */}
-                <button
-                  onClick={() => likePost(post.postId)}
-                  className="hover:opacity-60 active:scale-90 transition-all text-gray-900 outline-none"
-                >
+            <div className="flex justify-between items-center py-3">
+              <div className="flex gap-4">
+                <button onClick={() => likePost(post.postId)}>
                   {post.postLike ? (
-                    <FavoriteIcon className="text-[#ff3040] text-[26px]" />
+                    <FavoriteIcon className="text-red-500" />
                   ) : (
-                    <FavoriteBorderIcon className="text-[26px]" />
+                    <FavoriteBorderIcon />
                   )}
                 </button>
-
-                {/* COMMENT */}
-                <button
-                  onClick={() => setActivePost(post)}
-                  className="hover:opacity-60 active:scale-90 transition-all text-gray-900 outline-none"
-                >
-                  <ChatBubbleOutlineIcon className="text-[24px]" />
+                <button onClick={() => setActivePost(post)}>
+                  <ChatBubbleOutlineIcon />
                 </button>
-
-                {/* SHARE */}
-                <button className="hover:opacity-60 active:scale-90 transition-all text-gray-900 outline-none">
-                  <SendIcon className="text-[23px] -rotate-12 -translate-y-[2px]" />
+                <button>
+                  <SendIcon className="-rotate-12" />
                 </button>
               </div>
-
-              {/* FAVORITE */}
-              <button
-                onClick={() => toggleFavorite(post.postId)}
-                className="hover:opacity-60 active:scale-90 transition-all text-gray-900 outline-none"
-              >
-                {favorites.includes(post.postId) ? (
-                  <BookmarkIcon className="text-[26px] text-gray-900" />
-                ) : (
-                  <BookmarkBorderIcon className="text-[26px]" />
-                )}
+              <button onClick={() => toggleFavorite(post.postId)}>
+                {favorites.includes(post.postId) ? <BookmarkIcon /> : <BookmarkBorderIcon />}
               </button>
             </div>
 
-            {/* LIKES COUNT */}
-            <div className="px-0.5">
-              <p className="text-[14px] font-semibold text-gray-900 tracking-wide">
-                {post.postLikeCount || 0} likes
-              </p>
-            </div>
+            {/* LIKES */}
+            <p className="font-semibold text-sm">{post.postLikeCount || 0} likes</p>
 
             {/* DESCRIPTION */}
-            <div className="px-0.5 mt-1.5 text-[14px] leading-[18px] text-gray-900 select-text">
-              <span className="font-semibold mr-2 hover:text-gray-500 cursor-pointer">
-                {post.userName}
-              </span>
-              <span className="break-words">{post.description}</span>
+            <div className="text-sm mt-1">
+              <span className="font-semibold mr-2">{post.userName}</span>
+              {post.description}
             </div>
           </div>
         ))}
@@ -644,167 +659,38 @@ const PostsSection = () => {
 
       {/* COMMENTS MODAL */}
       {activePost && (
-        <CommentsModal post={activePost} onClose={() => setActivePost(null)} />
+        <CommentsModal
+          post={activePost}
+          onClose={() => setActivePost(null)}
+          getCurrentIndex={getCurrentIndex}
+          setPostIndex={setPostIndex}
+          toggleMute={toggleMute}
+          isMuted={isMuted}
+        />
       )}
 
-      {/* MENU MODAL */}
-      {menuPostId && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
-          onClick={() => setMenuPostId(null)}
-        >
-          <div
-            className="w-full max-w-[468px] bg-white rounded-2xl overflow-hidden"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Unfollow */}
-            {/* Unfollow / Follow — только если не свой пост */}
-            {posts.find((p: any) => p.postId === menuPostId)?.userId !==
-              userID &&
-              isFollowing(
-                posts.find((p: any) => p.postId === menuPostId)?.userId,
-              ) && (
-                <button
-                  onClick={async () => {
-                    const post = posts.find(
-                      (p: any) => p.postId === menuPostId,
-                    );
-                    if (post?.userId) await handleFollowToggle(post.userId);
-                    setMenuPostId(null);
-                  }}
-                  className="w-full py-4 text-[#ed4956] font-semibold text-[14px] border-b border-gray-100"
-                >
-                  Unfollow
-                </button>
-              )}
-
-            {/* Add to favorites */}
-            <button
-              onClick={() => {
-                const post = posts.find((p: any) => p.postId === menuPostId);
-                if (post) toggleFavorite(post.postId);
-                setMenuPostId(null);
-              }}
-              className="w-full py-4 text-[14px] border-b border-gray-100 text-gray-900"
-            >
-              {favorites.includes(menuPostId)
-                ? "Remove from favorites"
-                : "Add to favorites"}
-            </button>
-
-            {/* About this account */}
-            <button
-              onClick={() => {
-                const post = posts.find((p: any) => p.postId === menuPostId);
-                setAboutPost(post);
-                setMenuPostId(null);
-              }}
-              className="w-full py-4 text-[14px] border-b border-gray-100 text-gray-900"
-            >
-              About this account
-            </button>
-
-            {/* Cancel */}
-            <button
-              onClick={() => setMenuPostId(null)}
-              className="w-full py-4 text-[14px] text-gray-900 font-semibold"
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
+      {/* POST MENU MODAL (three dots) */}
+      {menuPost && (
+        <PostMenuModal
+          post={menuPost}
+          isFollowing={isFollowing(menuPost.userId)}
+          isFavorite={favorites.includes(menuPost.postId)}
+          onClose={() => setMenuPost(null)}
+          onFollowToggle={() => handleFollowToggle(menuPost.userId)}
+          onFavoriteToggle={() => toggleFavorite(menuPost.postId)}
+          onAbout={() => {
+            setAboutPost(menuPost);
+            setMenuPost(null);
+          }}
+        />
       )}
 
-      {/* ABOUT THIS ACCOUNT MODAL */}
+      {/* ABOUT ACCOUNT MODAL */}
       {aboutPost && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
-          onClick={() => setAboutPost(null)}
-        >
-          <div
-            className="bg-white w-full max-w-[380px] rounded-2xl overflow-hidden shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Header */}
-            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-              <h2 className="text-[16px] font-bold text-gray-900">
-                About this account
-              </h2>
-              <button
-                onClick={() => setAboutPost(null)}
-                className="text-gray-400 hover:text-gray-900 transition-colors"
-              >
-                <CloseIcon className="text-[22px]" />
-              </button>
-            </div>
-
-            {/* Avatar + name */}
-            <div className="flex flex-col items-center pt-8 pb-6 px-6 gap-3">
-              <div className="w-[90px] h-[90px] rounded-full overflow-hidden border-2 border-gray-200 shadow-md">
-                <img
-                  src={
-                    aboutPost.userImage
-                      ? `${Api}/images/${aboutPost.userImage}`
-                      : "https://cdn-icons-png.flaticon.com/512/149/149071.png"
-                  }
-                  className="w-full h-full object-cover"
-                  alt=""
-                />
-              </div>
-              <p className="text-[18px] font-bold text-gray-900">
-                {aboutPost.userName}
-              </p>
-            </div>
-
-            {/* Info rows */}
-            <div className="px-6 pb-6 flex flex-col gap-4 border-t border-gray-100 pt-5">
-              {/* Date joined */}
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 text-[18px]">
-                  <CalendarMonthIcon />
-                </div>
-                <div>
-                  <p className="text-[13px] text-gray-400">Date joined</p>
-                  <p className="text-[14px] font-semibold text-gray-900">
-                    {aboutPost.datePublished
-                      ? new Date(aboutPost.datePublished).toLocaleDateString(
-                          [],
-                          {
-                            year: "numeric",
-                            month: "long",
-                            day: "numeric",
-                          },
-                        )
-                      : "Unknown"}
-                  </p>
-                </div>
-              </div>
-
-              {/* Location */}
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 text-[18px]">
-                  <LocationPinIcon />
-                </div>
-                <div>
-                  <p className="text-[13px] text-gray-400">Location</p>
-                  <p className="text-[14px] font-semibold text-gray-900">
-                    {aboutPost.location || "Tajikistan"}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Close button */}
-            <div className="px-6 pb-6">
-              <button
-                onClick={() => setAboutPost(null)}
-                className="w-full py-3 rounded-xl bg-gray-100 text-gray-900 font-semibold text-[14px] hover:bg-gray-200 transition-colors"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
+        <AboutAccountModal
+          post={aboutPost}
+          onClose={() => setAboutPost(null)}
+        />
       )}
     </>
   );
