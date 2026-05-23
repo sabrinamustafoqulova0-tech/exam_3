@@ -19,6 +19,86 @@ import {
   useGetUsersQuery,
 } from "@/app/services/publication.home";
 
+// ───────────────────── POST CAROUSEL ─────────────────────
+const PostCarousel = ({ imagesStr, isModal = false }: { imagesStr: string | null | undefined; isModal?: boolean }) => {
+  const [activeIndex, setActiveIndex] = useState(0);
+
+  const images = React.useMemo(() => {
+    if (!imagesStr) return [];
+    if (Array.isArray(imagesStr)) {
+      return imagesStr.filter(Boolean);
+    }
+    if (typeof imagesStr === "string") {
+      return imagesStr.split(/[,;\s]+/).filter(Boolean);
+    }
+    return [String(imagesStr)];
+  }, [imagesStr]);
+
+  if (images.length === 0) {
+    return (
+      <img
+        src="https://picsum.photos/500/500"
+        className={`w-full h-full object-cover pointer-events-none ${isModal ? "object-contain" : ""}`}
+        alt=""
+      />
+    );
+  }
+
+  return (
+    <div className="relative w-full h-full group/carousel overflow-hidden bg-black flex items-center justify-center">
+      <img
+        src={`${Api}/images/${images[activeIndex]}`}
+        className={`w-full h-full pointer-events-none transition-all duration-300 ${
+          isModal ? "object-contain max-h-full" : "object-cover"
+        }`}
+        alt=""
+      />
+
+      {/* Carousel Left/Right navigation buttons */}
+      {activeIndex > 0 && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setActiveIndex(activeIndex - 1);
+          }}
+          className="absolute left-3 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white text-black shadow-md rounded-full p-1.5 transition duration-150 z-10 opacity-0 group-hover/carousel:opacity-100 cursor-pointer outline-none"
+        >
+          <svg className="w-4 h-4 stroke-[3]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+          </svg>
+        </button>
+      )}
+      {activeIndex < images.length - 1 && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setActiveIndex(activeIndex + 1);
+          }}
+          className="absolute right-3 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white text-black shadow-md rounded-full p-1.5 transition duration-150 z-10 opacity-0 group-hover/carousel:opacity-100 cursor-pointer outline-none"
+        >
+          <svg className="w-4 h-4 stroke-[3]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+          </svg>
+        </button>
+      )}
+
+      {/* Dots Indicator */}
+      {images.length > 1 && (
+        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 z-10 bg-black/10 px-2 py-1 rounded-full backdrop-blur-[1px]">
+          {images.map((_, idx) => (
+            <div
+              key={idx}
+              className={`w-1.5 h-1.5 rounded-full transition-all duration-150 ${
+                activeIndex === idx ? "bg-[#0095f6] scale-110" : "bg-white/60"
+              }`}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
 // ───────────────────── COMMENTS MODAL ─────────────────────
 const CommentsModal = ({
   post,
@@ -60,17 +140,9 @@ const CommentsModal = ({
         className="bg-white w-full max-w-[85vw] xl:max-w-[1200px] h-[90vh] rounded-sm flex overflow-hidden relative shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* IMAGE */}
-        <div className="hidden md:flex w-[55%] bg-black items-center justify-center border-r border-gray-100">
-          <img
-            src={
-              post.images
-                ? `${Api}/images/${post.images}`
-                : "https://picsum.photos/500/600"
-            }
-            className="w-full h-full object-contain max-h-full"
-            alt=""
-          />
+        {/* IMAGE CAROUSEL */}
+        <div className="hidden md:flex w-[55%] bg-black items-center justify-center border-r border-gray-100 relative">
+          <PostCarousel imagesStr={post.images} isModal={true} />
         </div>
 
         {/* COMMENTS */}
@@ -232,17 +304,9 @@ const PostsSection = () => {
               </button>
             </div>
 
-            {/* IMAGE */}
-            <div className="w-full rounded-sm overflow-hidden border border-gray-100 bg-black flex items-center justify-center aspect-square">
-              <img
-                src={
-                  post.images
-                    ? `${Api}/images/${post.images}`
-                    : "https://picsum.photos/500/500"
-                }
-                className="w-full h-full object-cover pointer-events-none"
-                alt=""
-              />
+            {/* IMAGE CAROUSEL */}
+            <div className="w-full rounded-sm overflow-hidden border border-gray-100 bg-black flex items-center justify-center aspect-square relative">
+              <PostCarousel imagesStr={post.images} />
             </div>
 
             {/* ACTIONS */}

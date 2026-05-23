@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState } from "react";
+import NotificationsDrawer from "./NotificationsDrawer";
 
 import HomeIcon from "@mui/icons-material/Home";
 import HomeOutlinedIcon from "@mui/icons-material/HomeOutlined";
@@ -29,20 +31,24 @@ import MenuOutlinedIcon from "@mui/icons-material/MenuOutlined";
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const [showNotifications, setShowNotifications] = useState(false);
+
   return (
-    <div
-      className="
-        group
-        h-screen
-        flex
-        flex-col
-        p-3
-        transition-all
-        duration-300
-        w-[80px]
-        hover:w-[250px]
-      "
-    >
+    <div className="group relative flex flex-shrink-0 z-50">
+      <div
+        className="
+          h-screen
+          flex
+          flex-col
+          p-3
+          transition-all
+          duration-300
+          w-[80px]
+          group-hover:w-[250px]
+          border-r border-gray-100
+          bg-white
+        "
+      >
       {/* LOGO */}
       <div className="mb-10 px-2">
         <img
@@ -118,20 +124,23 @@ export default function Sidebar() {
             <span className="hidden group-hover:block">Explore</span>
           </button>
         </Link>
-        <Link
-          href="/notifications"
-          className="flex items-center  hover:bg-gray-100  rounded-xl"
+        <button
+          onClick={(e) => {
+            e.preventDefault();
+            setShowNotifications(!showNotifications);
+          }}
+          className="flex items-center hover:bg-gray-100 rounded-xl w-full text-left outline-none cursor-pointer"
         >
-          <button className="flex items-center gap-4 hover:bg-gray-100 p-3 rounded-xl">
-            {pathname === "/notifications" ? (
-              <FavoriteIcon />
+          <div className="flex items-center gap-4 hover:bg-gray-100 p-3 rounded-xl w-full">
+            {showNotifications ? (
+              <FavoriteIcon className="text-black" />
             ) : (
-              <FavoriteBorderIcon />
+              <FavoriteBorderIcon className="text-black" />
             )}
 
-            <span className="hidden group-hover:block">Notifications</span>
-          </button>
-        </Link>
+            <span className="hidden group-hover:block text-black">Notifications</span>
+          </div>
+        </button>
 
         <Link
           href="/create"
@@ -166,6 +175,12 @@ export default function Sidebar() {
           </button>
         </Link>
       </div>
+      </div>
+
+      <NotificationsDrawer 
+        isOpen={showNotifications} 
+        onClose={() => setShowNotifications(false)} 
+      />
     </div>
   );
 }
