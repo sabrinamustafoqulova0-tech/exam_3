@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import CircularProgress from '@mui/material/CircularProgress'
 import { useGetUsersQuery } from '../../services/Search'
 
 const IMAGE_BASE_URL = process.env.NEXT_PUBLIC_IMAGES || 'https://instagram-api.softclub.tj/images'
@@ -11,6 +12,7 @@ export default function Navbar() {
   const [isOpenSearch, setIsOpenSearch] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [debouncedQuery, setDebouncedQuery] = useState('')
+  const [loadingAvatars, setLoadingAvatars] = useState<Set<string>>(new Set())
 
   // Имитируем задержку ввода (Debounce), чтобы не спамить сервер при каждом символе
   useEffect(() => {
@@ -41,6 +43,31 @@ export default function Navbar() {
     // Переход на страницу чужого профиля по id пользователя
     router.push(`/user/${userId}`)
   }
+
+  // Функция для управления загрузкой аватарок
+  const setAvatarLoading = (userId: string, loading: boolean) => {
+    setLoadingAvatars((prev) => {
+      const newSet = new Set(prev)
+      if (loading) {
+        newSet.add(userId)
+      } else {
+        newSet.delete(userId)
+      }
+      return newSet
+    })
+  }
+
+  // Инициализация загрузки аватарок при получении результатов
+  useEffect(() => {
+    const newLoading = new Set<string>()
+    filteredUsers.forEach((user: any) => {
+      const rawAvatar = (user?.avatar || user?.imagePath || user?.image || user?.userImage || '').trim()
+      if (rawAvatar && rawAvatar !== '') {
+        newLoading.add(user.id)
+      }
+    })
+    setLoadingAvatars(newLoading)
+  }, [filteredUsers])
 
   return (
     <div className="flex fixed left-0 top-0 z-50 h-screen select-none">
@@ -149,17 +176,16 @@ export default function Navbar() {
                   <div className="text-[#8e8e8e] text-center py-6 text-[14px]">Поиск аккаунтов...</div>
                 ) : filteredUsers.length > 0 ? (
                   filteredUsers.map((user: any) => {
-                    {/* ЗАМЕНИ НА ЭТОТ КУСОК КОДА: */ }
                     const rawAvatar = (user?.avatar || user?.imagePath || user?.image || user?.userImage || '').trim()
 
-                    const userAvatar = rawAvatar
+                    const avatar = rawAvatar
                       ? (rawAvatar.startsWith('http')
                         ? rawAvatar
                         : `${IMAGE_BASE_URL}/${rawAvatar.replace(/^\/+/, '')}`)
                       : ''
 
                     // Проверяем, пустой ли аватар ИЛИ содержит ли он дефолтную картинку женщины с сервера
-                    const isDefaultServerImage = userAvatar.includes('photo-1534528741775-53994a69daeb') || rawAvatar === ''
+                    const isDefaultServerImage = avatar.includes('photo-1534528741775-53994a69daeb') || rawAvatar === ''
                     const hasAvatar = !isDefaultServerImage
                     return (
                       <div
@@ -167,13 +193,20 @@ export default function Navbar() {
                         onClick={() => handleUserClick(user.id)}
                         className="flex items-center gap-3 p-2 rounded-lg hover:bg-[#fafafa] cursor-pointer transition-colors"
                       >
-                        <div className="w-11 h-11 rounded-full bg-[#f2f2f2] overflow-hidden border border-[#dbdbdb] flex-shrink-0 flex items-center justify-center text-[16px] font-bold text-[#262626] uppercase">
+                        <div className="w-11 h-11 rounded-full bg-[#f2f2f2] overflow-hidden border border-[#dbdbdb] flex-shrink-0 flex items-center justify-center text-[16px] font-bold text-[#262626] uppercase relative">
+                          {loadingAvatars.has(user.id) && (
+                            <div className="absolute inset-0 flex items-center justify-center bg-white rounded-full z-10">
+                              <CircularProgress size={16} thickness={5} className="text-gray-400" />
+                            </div>
+                          )}
                           {hasAvatar ? (
                             <img
-                              src={userAvatar}
+                              src={avatar}
                               alt={user.userName || user.fullName || 'User'}
                               className="w-full h-full object-cover"
+                              onLoad={() => setAvatarLoading(user.id, false)}
                               onError={(e) => {
+                                setAvatarLoading(user.id, false)
                                 ; (e.target as HTMLImageElement).src = ''
                               }}
                             />
