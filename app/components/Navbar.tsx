@@ -1,8 +1,9 @@
 "use client";
 
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import {  useRef } from "react";
 
 // Icons for the main menu
 import HomeIcon from "@mui/icons-material/Home";

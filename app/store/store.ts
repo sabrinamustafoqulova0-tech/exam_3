@@ -10,6 +10,7 @@ import { postApi } from "../services/publication.home";
 import { authApi } from "../services/authApi"
 import { reelsApi } from "../services/Reels"
 import notificationReducer from "./notificationSlice"
+import { chatApi } from "../services/chatApi";
 
 
 export const store = configureStore({
@@ -21,6 +22,8 @@ export const store = configureStore({
     [storyApi.reducerPath]: storyApi.reducer,
     [postApi.reducerPath]: postApi.reducer,
     [reelsApi.reducerPath]: reelsApi.reducer,
+        [chatApi.reducerPath]: chatApi.reducer,
+
     notifications: notificationReducer,
     // Здесь также могут быть твои обычные слайсы, например:
     // home: homeReducer,
@@ -33,8 +36,8 @@ export const store = configureStore({
       profileApi.middleware,
       storyApi.middleware,
       postApi.middleware,
-      reelsApi.middleware
-    ),
+      reelsApi.middleware,
+chatApi.middleware    ),
 });
 export type RootState = ReturnType<typeof store.getState>
 export type AppDispatch = typeof store.dispatch

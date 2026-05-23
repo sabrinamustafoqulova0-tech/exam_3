@@ -397,5 +397,5 @@ export default function MyProfilePage() {
 
       </div>
     </div>
-  )
+  );
 }
