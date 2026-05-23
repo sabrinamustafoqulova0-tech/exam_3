@@ -6,8 +6,12 @@ export default function MainLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex">
-      <Navbar/>
+    <div className="flex min-h-screen">
+      {/* Обертка для фиксации при скролле */}
+      <div className="sticky top-0 h-screen">
+        <Navbar />
+      </div>
+      
       <div className="flex-1">{children}</div>
     </div>
   );

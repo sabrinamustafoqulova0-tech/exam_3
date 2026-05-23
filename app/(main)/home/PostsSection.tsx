@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import BookmarkIcon from "@mui/icons-material/Bookmark";
 import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
 import FavoriteIcon from "@mui/icons-material/Favorite";
@@ -23,7 +23,6 @@ import { Api, GetUserId } from "@/app/utils/token";
 import {
   useAddCommentMutation,
   useGetFollowingPostsQuery,
-  useGetPostsQuery,
   useLikePostMutation,
   useFavoritePostMutation,
   useGetUsersQuery,
@@ -32,7 +31,67 @@ import {
   useGetSubscriptionsQuery,
 } from "@/app/services/publication.home";
 
-// ─── REPOST MODAL WITH EDIT & DELETE OPTIONS ───────────────────────────────
+// ─── АВТОПЛЕЙ ВИДЕО ЧЕРЕЗ INTERSECTION OBSERVER ─────────────────────────────
+// Компонент видео, который сам следит за видимостью и паузит/играет
+const AutoPlayVideo = ({
+  src,
+  muted,
+  className,
+}: {
+  src: string;
+  muted: boolean;
+  className?: string;
+}) => {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const observerRef = useRef<IntersectionObserver | null>(null);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    observerRef.current = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
+            // Пост виден больше чем на 50% — играем
+            video.play().catch(() => {});
+          } else {
+            // Пост ушёл из вида — останавливаем и сбрасываем
+            video.pause();
+          }
+        });
+      },
+      { threshold: 0.5 }
+    );
+
+    observerRef.current.observe(video);
+
+    return () => {
+      observerRef.current?.disconnect();
+    };
+  }, [src]);
+
+  // Синхронизируем muted без перезапуска видео
+  useEffect(() => {
+    if (videoRef.current) {
+      videoRef.current.muted = muted;
+    }
+  }, [muted]);
+
+  return (
+    <video
+      ref={videoRef}
+      src={src}
+      className={className}
+      muted={muted}
+      loop
+      playsInline
+      preload="metadata"
+    />
+  );
+};
+
+// ─── REPOST MODAL ────────────────────────────────────────────────────────────
 interface RepostModalProps {
   isOpen: boolean;
   currentText: string;
@@ -46,15 +105,13 @@ const RepostModal = ({ isOpen, currentText, onClose, onConfirm, onDelete, isEdit
   const [text, setText] = useState("");
 
   useEffect(() => {
-    if (isOpen) {
-      setText(currentText);
-    }
+    if (isOpen) setText(currentText);
   }, [isOpen, currentText]);
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-xs animate-fade-in">
+    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-xs">
       <div className="bg-white w-full max-w-[340px] rounded-2xl overflow-hidden shadow-2xl flex flex-col">
         <div className="px-4 py-3 border-b border-gray-100 flex justify-between items-center">
           <span className="font-semibold text-sm text-gray-800">
@@ -73,32 +130,22 @@ const RepostModal = ({ isOpen, currentText, onClose, onConfirm, onDelete, isEdit
             rows={3}
             className="w-full border border-gray-200 rounded-xl p-3 text-sm outline-none resize-none focus:border-purple-400 transition"
           />
-          <div className="text-right text-[11px] text-gray-400 mt-1">
-            {text.length}/60
-          </div>
+          <div className="text-right text-[11px] text-gray-400 mt-1">{text.length}/60</div>
         </div>
         <div className="flex flex-col border-t border-gray-100">
           <div className="flex w-full">
-            <button
-              onClick={onClose}
-              className="flex-1 py-3 text-sm font-medium text-gray-500 hover:bg-gray-50 transition border-r border-gray-100"
-            >
+            <button onClick={onClose} className="flex-1 py-3 text-sm font-medium text-gray-500 hover:bg-gray-50 transition border-r border-gray-100">
               Отмена
             </button>
             <button
-              onClick={() => {
-                onConfirm(text.trim() || "Добавьте ваше мнение...");
-              }}
+              onClick={() => onConfirm(text.trim() || "Добавьте ваше мнение...")}
               className="flex-1 py-3 text-sm font-semibold text-[#783bf2] hover:bg-purple-50/50 transition"
             >
               {isEditMode ? "Сохранить" : "Поделиться"}
             </button>
           </div>
           {isEditMode && onDelete && (
-            <button
-              onClick={onDelete}
-              className="w-full py-3 text-sm font-medium text-red-500 border-t border-gray-100 hover:bg-red-50 transition text-center"
-            >
+            <button onClick={onDelete} className="w-full py-3 text-sm font-medium text-red-500 border-t border-gray-100 hover:bg-red-50 transition text-center">
               Удалить репост из публикации
             </button>
           )}
@@ -108,57 +155,49 @@ const RepostModal = ({ isOpen, currentText, onClose, onConfirm, onDelete, isEdit
   );
 };
 
-// ─── POST MENU MODAL ────────────────────────────────────────────────────────
-const PostMenuModal = ({ post, isFollowing, isFavorite, onClose, onFollowToggle, onFavoriteToggle, onAbout }: any) => {
-  return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center" onClick={onClose}>
-      <div className="bg-white w-full max-w-[400px] rounded-xl overflow-hidden mb-4 sm:mb-0" onClick={(e) => e.stopPropagation()}>
-        <button onClick={() => { onFollowToggle(); onClose(); }} className="w-full py-3.5 text-sm font-semibold text-red-500 border-b border-gray-100 hover:bg-gray-50 transition">
-          {isFollowing ? "Unfollow" : "Follow"}
-        </button>
-        <button onClick={() => { onFavoriteToggle(); onClose(); }} className="w-full py-3.5 text-sm font-semibold text-gray-800 border-b border-gray-100 hover:bg-gray-50 transition">
-          {isFavorite ? "Remove from Favorites" : "Add to Favorites"}
-        </button>
-        <button onClick={() => { onAbout(); onClose(); }} className="w-full py-3.5 text-sm font-semibold text-gray-800 border-b border-gray-100 hover:bg-gray-50 transition">
-          About account
-        </button>
-        <button onClick={onClose} className="w-full py-3.5 text-sm text-gray-500 hover:bg-gray-50 transition">
-          Cancel
-        </button>
+// ─── POST MENU MODAL ──────────────────────────────────────────────────────────
+const PostMenuModal = ({ post, isFollowing, isFavorite, onClose, onFollowToggle, onFavoriteToggle, onAbout }: any) => (
+  <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center" onClick={onClose}>
+    <div className="bg-white w-full max-w-[400px] rounded-xl overflow-hidden mb-4 sm:mb-0" onClick={(e) => e.stopPropagation()}>
+      <button onClick={() => { onFollowToggle(); onClose(); }} className="w-full py-3.5 text-sm font-semibold text-red-500 border-b border-gray-100 hover:bg-gray-50 transition">
+        {isFollowing ? "Unfollow" : "Follow"}
+      </button>
+      <button onClick={() => { onFavoriteToggle(); onClose(); }} className="w-full py-3.5 text-sm font-semibold text-gray-800 border-b border-gray-100 hover:bg-gray-50 transition">
+        {isFavorite ? "Remove from Favorites" : "Add to Favorites"}
+      </button>
+      <button onClick={() => { onAbout(); onClose(); }} className="w-full py-3.5 text-sm font-semibold text-gray-800 border-b border-gray-100 hover:bg-gray-50 transition">
+        About account
+      </button>
+      <button onClick={onClose} className="w-full py-3.5 text-sm text-gray-500 hover:bg-gray-50 transition">Cancel</button>
+    </div>
+  </div>
+);
+
+// ─── ABOUT ACCOUNT MODAL ──────────────────────────────────────────────────────
+const AboutAccountModal = ({ post, onClose }: any) => (
+  <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={onClose}>
+    <div className="bg-white w-full max-w-[360px] rounded-xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
+      <div className="flex items-center justify-between px-4 py-3 border-b">
+        <span className="font-semibold text-sm">About this account</span>
+        <button onClick={onClose}><CloseIcon style={{ fontSize: 20 }} /></button>
+      </div>
+      <div className="p-5 flex flex-col items-center gap-3">
+        <img
+          src={post.userImage ? `${Api}/images/${post.userImage}` : "https://cdn-icons-png.flaticon.com/512/149/149071.png"}
+          className="w-16 h-16 rounded-full object-cover"
+          alt=""
+        />
+        <span className="font-semibold text-base">{post.userName}</span>
+        {post.userEmail && <span className="text-sm text-gray-500">{post.userEmail}</span>}
+      </div>
+      <div className="px-5 pb-5">
+        <button onClick={onClose} className="w-full py-2.5 text-sm font-semibold text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition">Close</button>
       </div>
     </div>
-  );
-};
+  </div>
+);
 
-// ─── ABOUT ACCOUNT MODAL ────────────────────────────────────────────────────
-const AboutAccountModal = ({ post, onClose }: any) => {
-  return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-white w-full max-w-[360px] rounded-xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between px-4 py-3 border-b">
-          <span className="font-semibold text-sm">About this account</span>
-          <button onClick={onClose}><CloseIcon style={{ fontSize: 20 }} /></button>
-        </div>
-        <div className="p-5 flex flex-col items-center gap-3">
-          <img
-            src={post.userImage ? `${Api}/images/${post.userImage}` : "https://cdn-icons-png.flaticon.com/512/149/149071.png"}
-            className="w-16 h-16 rounded-full object-cover"
-            alt=""
-          />
-          <span className="font-semibold text-base">{post.userName}</span>
-          {post.userEmail && <span className="text-sm text-gray-500">{post.userEmail}</span>}
-        </div>
-        <div className="px-5 pb-5">
-          <button onClick={onClose} className="w-full py-2.5 text-sm font-semibold text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition">
-            Close
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// ─── COMMENTS MODAL ─────────────────────────────────────────────────────────
+// ─── COMMENTS MODAL ───────────────────────────────────────────────────────────
 const CommentsModal = ({ post, onClose, getCurrentIndex, setPostIndex, toggleMute, isMuted }: any) => {
   const [text, setText] = useState("");
   const [comments, setComments] = useState<any[]>(post.comments ?? []);
@@ -184,7 +223,7 @@ const CommentsModal = ({ post, onClose, getCurrentIndex, setPostIndex, toggleMut
     setText("");
   };
 
-  const handleReplySubmit = (commentId: number, atUser: string) => {
+  const handleReplySubmit = (commentId: number) => {
     if (!replyText.trim()) return;
     setReplies((prev) => ({
       ...prev,
@@ -225,16 +264,20 @@ const CommentsModal = ({ post, onClose, getCurrentIndex, setPostIndex, toggleMut
           )}
           <div className="w-full h-full">
             {post.images?.[getCurrentIndex(post.postId)]?.match(/\.(mp4|webm|ogg)$/i) ? (
-              <video src={`${Api}/images/${post.images[getCurrentIndex(post.postId)]}`} className="w-full h-full object-cover" muted={isMuted(post.postId)} autoPlay loop playsInline />
+              <video
+                src={`${Api}/images/${post.images[getCurrentIndex(post.postId)]}`}
+                className="w-full h-full object-cover"
+                muted={isMuted(post.postId)}
+                autoPlay loop playsInline
+              />
             ) : (
               <img src={`${Api}/images/${post.images[getCurrentIndex(post.postId)]}`} className="w-full h-full object-cover" alt="" />
             )}
           </div>
         </div>
 
-        {/* RIGHT: comments panel */}
+        {/* RIGHT: comments */}
         <div className="w-[420px] flex flex-col bg-white">
-          {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
             <div className="flex items-center gap-2">
               <img src={post.userImage ? `${Api}/images/${post.userImage}` : "https://cdn-icons-png.flaticon.com/512/149/149071.png"} className="w-8 h-8 rounded-full object-cover" alt="" />
@@ -243,16 +286,13 @@ const CommentsModal = ({ post, onClose, getCurrentIndex, setPostIndex, toggleMut
             <MoreHorizIcon sx={{ fontSize: 20 }} />
           </div>
 
-          {/* Comments list */}
           <div className="flex-1 overflow-y-auto px-4 py-3 space-y-4">
             {post.description && (
               <div className="flex gap-3">
                 <img src={post.userImage ? `${Api}/images/${post.userImage}` : "https://cdn-icons-png.flaticon.com/512/149/149071.png"} className="w-8 h-8 rounded-full object-cover flex-shrink-0" alt="" />
-                <div className="flex-1">
-                  <div className="text-[13px] leading-[18px] break-words">
-                    <span className="font-semibold mr-2">{post.userName}</span>
-                    <span className="text-gray-800">{post.description}</span>
-                  </div>
+                <div className="text-[13px] leading-[18px] break-words">
+                  <span className="font-semibold mr-2">{post.userName}</span>
+                  <span className="text-gray-800">{post.description}</span>
                 </div>
               </div>
             )}
@@ -267,7 +307,6 @@ const CommentsModal = ({ post, onClose, getCurrentIndex, setPostIndex, toggleMut
 
               return (
                 <div key={commentId}>
-                  {/* Main comment row */}
                   <div className="flex gap-3 group">
                     <img
                       src={user?.avatar ? `${Api}/images/${user.avatar}` : "https://cdn-icons-png.flaticon.com/512/149/149071.png"}
@@ -275,89 +314,39 @@ const CommentsModal = ({ post, onClose, getCurrentIndex, setPostIndex, toggleMut
                       alt=""
                     />
                     <div className="flex-1 min-w-0">
-                      {/* Comment text */}
                       <div className="text-[13px] leading-[18px] break-words">
                         <span className="font-semibold mr-2">{user?.userName || c.userName || "User"}</span>
                         <span className="text-gray-800">{c.comment || c.text}</span>
                       </div>
-                      {/* Meta row: time + Reply */}
                       <div className="flex items-center gap-3 mt-1">
                         <span className="text-[11px] text-gray-400">2h</span>
-                        {cLikeCount > 0 && (
-                          <span className="text-[11px] text-gray-400 font-semibold">{cLikeCount} likes</span>
-                        )}
-                        <button
-                          onClick={() => {
-                            setReplyingTo(replyingTo === commentId ? null : commentId);
-                            setReplyText("");
-                          }}
-                          className="text-[11px] font-semibold text-gray-400 hover:text-gray-700 transition-colors"
-                        >
-                          Reply
-                        </button>
+                        {cLikeCount > 0 && <span className="text-[11px] text-gray-400 font-semibold">{cLikeCount} likes</span>}
+                        <button onClick={() => { setReplyingTo(replyingTo === commentId ? null : commentId); setReplyText(""); }} className="text-[11px] font-semibold text-gray-400 hover:text-gray-700 transition-colors">Reply</button>
                       </div>
-
-                      {/* Show replies toggle */}
                       {cReplies.length > 0 && (
-                        <button
-                          onClick={() => setExpandedReplies((prev) => isExpanded ? prev.filter((x) => x !== commentId) : [...prev, commentId])}
-                          className="flex items-center gap-2 mt-2 text-[12px] font-semibold text-gray-500 hover:text-gray-800 transition-colors"
-                        >
+                        <button onClick={() => setExpandedReplies((prev) => isExpanded ? prev.filter((x) => x !== commentId) : [...prev, commentId])} className="flex items-center gap-2 mt-2 text-[12px] font-semibold text-gray-500 hover:text-gray-800 transition-colors">
                           <span className="inline-block w-6 h-[1px] bg-gray-400" />
                           {isExpanded ? "Hide replies" : `View ${cReplies.length} ${cReplies.length === 1 ? "reply" : "replies"}`}
                         </button>
                       )}
-
-                      {/* Replies list */}
                       {isExpanded && cReplies.map((r: any) => (
                         <div key={r.id} className="flex gap-2 mt-3 ml-1">
-                          <img
-                            src="https://cdn-icons-png.flaticon.com/512/149/149071.png"
-                            className="w-6 h-6 rounded-full object-cover flex-shrink-0"
-                            alt=""
-                          />
-                          <div>
-                            <div className="text-[13px] leading-[17px] break-words">
-                              <span className="font-semibold mr-2">{r.userName}</span>
-                              <span className="text-gray-800">{r.text}</span>
-                            </div>
-                            <div className="flex items-center gap-3 mt-0.5">
-                              <span className="text-[11px] text-gray-400">just now</span>
-                            </div>
+                          <img src="https://cdn-icons-png.flaticon.com/512/149/149071.png" className="w-6 h-6 rounded-full object-cover flex-shrink-0" alt="" />
+                          <div className="text-[13px] leading-[17px] break-words">
+                            <span className="font-semibold mr-2">{r.userName}</span>
+                            <span className="text-gray-800">{r.text}</span>
                           </div>
                         </div>
                       ))}
-
-                      {/* Reply input */}
                       {replyingTo === commentId && (
                         <div className="flex items-center gap-2 mt-2">
-                          <input
-                            autoFocus
-                            value={replyText}
-                            onChange={(e) => setReplyText(e.target.value)}
-                            onKeyDown={(e) => { if (e.key === "Enter") handleReplySubmit(commentId, user?.userName || c.userName || "User"); }}
-                            placeholder={`Reply to ${user?.userName || c.userName || "User"}...`}
-                            className="flex-1 text-[13px] outline-none border-b border-gray-300 focus:border-gray-600 py-1 bg-transparent placeholder:text-gray-400 transition-colors"
-                          />
-                          <button
-                            onClick={() => handleReplySubmit(commentId, user?.userName || c.userName || "User")}
-                            disabled={!replyText.trim()}
-                            className="text-[13px] font-semibold text-blue-500 disabled:opacity-40 transition-opacity"
-                          >
-                            Post
-                          </button>
+                          <input autoFocus value={replyText} onChange={(e) => setReplyText(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") handleReplySubmit(commentId); }} placeholder={`Reply to ${user?.userName || c.userName || "User"}...`} className="flex-1 text-[13px] outline-none border-b border-gray-300 focus:border-gray-600 py-1 bg-transparent placeholder:text-gray-400 transition-colors" />
+                          <button onClick={() => handleReplySubmit(commentId)} disabled={!replyText.trim()} className="text-[13px] font-semibold text-blue-500 disabled:opacity-40 transition-opacity">Post</button>
                         </div>
                       )}
                     </div>
-
-                    {/* Like button for comment */}
-                    <button
-                      onClick={() => toggleLikeComment(commentId)}
-                      className="flex-shrink-0 self-start mt-0.5 transition-transform active:scale-75"
-                    >
-                      {isLikedC
-                        ? <FavoriteIcon sx={{ fontSize: 12 }} className="text-red-500" />
-                        : <FavoriteBorderIcon sx={{ fontSize: 12 }} className="text-gray-400" />}
+                    <button onClick={() => toggleLikeComment(commentId)} className="flex-shrink-0 self-start mt-0.5 transition-transform active:scale-75">
+                      {isLikedC ? <FavoriteIcon sx={{ fontSize: 12 }} className="text-red-500" /> : <FavoriteBorderIcon sx={{ fontSize: 12 }} className="text-gray-400" />}
                     </button>
                   </div>
                 </div>
@@ -365,51 +354,27 @@ const CommentsModal = ({ post, onClose, getCurrentIndex, setPostIndex, toggleMut
             })}
           </div>
 
-          {/* Post actions bar (Instagram style) */}
           <div className="border-t border-gray-100 px-4 pt-3 pb-1">
             <div className="flex justify-between items-center mb-1">
               <div className="flex gap-4 items-center">
                 <button onClick={handleModalLike} className="hover:scale-105 active:scale-90 transition-transform">
-                  {modalLiked
-                    ? <FavoriteIcon sx={{ fontSize: 26 }} className="text-red-500" />
-                    : <FavoriteBorderIcon sx={{ fontSize: 26 }} className="text-gray-900" />}
+                  {modalLiked ? <FavoriteIcon sx={{ fontSize: 26 }} className="text-red-500" /> : <FavoriteBorderIcon sx={{ fontSize: 26 }} className="text-gray-900" />}
                 </button>
                 <button className="hover:scale-105 active:scale-90 transition-transform text-gray-900">
                   <ChatBubbleOutlineIcon sx={{ fontSize: 24 }} />
                 </button>
               </div>
               <button onClick={() => setModalSaved((s) => !s)} className="text-gray-900">
-                {modalSaved
-                  ? <BookmarkIcon sx={{ fontSize: 24 }} />
-                  : <BookmarkBorderIcon sx={{ fontSize: 24 }} />}
+                {modalSaved ? <BookmarkIcon sx={{ fontSize: 24 }} /> : <BookmarkBorderIcon sx={{ fontSize: 24 }} />}
               </button>
             </div>
-            {modalLikeCount > 0 && (
-              <div className="text-[13px] font-semibold text-gray-900 mb-1">{modalLikeCount.toLocaleString()} likes</div>
-            )}
+            {modalLikeCount > 0 && <div className="text-[13px] font-semibold text-gray-900 mb-1">{modalLikeCount.toLocaleString()} likes</div>}
           </div>
 
-          {/* Comment input */}
           <div className="flex items-center gap-3 px-4 py-3 border-t border-gray-100">
-            <img
-              src="https://cdn-icons-png.flaticon.com/512/149/149071.png"
-              className="w-7 h-7 rounded-full object-cover flex-shrink-0"
-              alt=""
-            />
-            <input
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter") handleSubmit(); }}
-              placeholder="Add a comment..."
-              className="flex-1 text-[13px] outline-none bg-transparent placeholder:text-gray-400"
-            />
-            <button
-              onClick={handleSubmit}
-              disabled={!text.trim()}
-              className="text-[13px] font-semibold text-blue-500 disabled:opacity-40 transition-opacity"
-            >
-              Post
-            </button>
+            <img src="https://cdn-icons-png.flaticon.com/512/149/149071.png" className="w-7 h-7 rounded-full object-cover flex-shrink-0" alt="" />
+            <input value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") handleSubmit(); }} placeholder="Add a comment..." className="flex-1 text-[13px] outline-none bg-transparent placeholder:text-gray-400" />
+            <button onClick={handleSubmit} disabled={!text.trim()} className="text-[13px] font-semibold text-blue-500 disabled:opacity-40 transition-opacity">Post</button>
           </div>
         </div>
       </div>
@@ -417,7 +382,7 @@ const CommentsModal = ({ post, onClose, getCurrentIndex, setPostIndex, toggleMut
   );
 };
 
-// ─── MAIN POSTS SECTION ─────────────────────────────────────────────────────
+// ─── MAIN POSTS SECTION ───────────────────────────────────────────────────────
 const PostsSection = () => {
   const userID: any = GetUserId();
 
@@ -426,19 +391,19 @@ const PostsSection = () => {
   const [menuPost, setMenuPost] = useState<any>(null);
   const [aboutPost, setAboutPost] = useState<any>(null);
   const [currentIndexes, setCurrentIndexes] = useState<Record<number, number>>({});
-  const [mutedPosts, setMutedPosts] = useState<Record<number, boolean>>({});
   const swiperRefs = useRef<Record<number, any>>({});
+
+  // Muted state: по умолчанию все muted (как в Instagram)
+  const [mutedPosts, setMutedPosts] = useState<Record<number, boolean>>({});
 
   // Лайки
   const [localLikes, setLocalLikes] = useState<Record<number, boolean>>({});
   const [localLikeCounts, setLocalLikeCounts] = useState<Record<number, number>>({});
 
-  // Репосты / Заметки
+  // Репосты
   const [isReposted, setIsReposted] = useState<Record<number, boolean>>({});
   const [fakeReposts, setFakeReposts] = useState<Record<number, number>>({});
   const [repostTexts, setRepostTexts] = useState<Record<number, string>>({});
-
-  // Таргет для модалки заметок
   const [repostModalTargetId, setRepostModalTargetId] = useState<number | null>(null);
 
   const [likePost] = useLikePostMutation();
@@ -453,23 +418,25 @@ const PostsSection = () => {
   useEffect(() => {
     if (posts.length > 0) {
       setFavorites(posts.filter((p: any) => p.postFavorite).map((p: any) => p.postId));
-
       const likesMap: Record<number, boolean> = {};
       const likeCountsMap: Record<number, number> = {};
       const repostsMap: Record<number, number> = {};
       const repostStatusMap: Record<number, boolean> = {};
+      const mutedMap: Record<number, boolean> = {};
 
       posts.forEach((p: any) => {
         likesMap[p.postId] = !!p.postLike;
         likeCountsMap[p.postId] = p.postLikeCount ?? 0;
-        repostsMap[p.postId] = 30; 
-        repostStatusMap[p.postId] = false; 
+        repostsMap[p.postId] = 30;
+        repostStatusMap[p.postId] = false;
+        mutedMap[p.postId] = true; // все видео начинают без звука
       });
 
       setLocalLikes(likesMap);
       setLocalLikeCounts(likeCountsMap);
       setFakeReposts(repostsMap);
       setIsReposted(repostStatusMap);
+      setMutedPosts(mutedMap);
     }
   }, [posts]);
 
@@ -477,11 +444,8 @@ const PostsSection = () => {
     subscriptions.some((sub: any) => sub.userShortInfo?.userId?.toLowerCase() === userId?.toLowerCase());
 
   const handleFollowToggle = async (userId: string) => {
-    if (isFollowing(userId)) {
-      await unfollowUser(userId);
-    } else {
-      await followUser(userId);
-    }
+    if (isFollowing(userId)) await unfollowUser(userId);
+    else await followUser(userId);
   };
 
   const toggleFavorite = async (postId: number) => {
@@ -492,41 +456,27 @@ const PostsSection = () => {
   const handleLike = async (postId: number) => {
     const wasLiked = localLikes[postId];
     setLocalLikes((prev) => ({ ...prev, [postId]: !wasLiked }));
-    setLocalLikeCounts((prev) => ({
-      ...prev,
-      [postId]: wasLiked ? Math.max((prev[postId] ?? 0) - 1, 0) : (prev[postId] ?? 0) + 1,
-    }));
+    setLocalLikeCounts((prev) => ({ ...prev, [postId]: wasLiked ? Math.max((prev[postId] ?? 0) - 1, 0) : (prev[postId] ?? 0) + 1 }));
     try {
       await likePost(postId).unwrap();
     } catch {
       setLocalLikes((prev) => ({ ...prev, [postId]: wasLiked }));
-      setLocalLikeCounts((prev) => ({
-        ...prev,
-        [postId]: wasLiked ? (prev[postId] ?? 0) + 1 : Math.max((prev[postId] ?? 0) - 1, 0),
-      }));
+      setLocalLikeCounts((prev) => ({ ...prev, [postId]: wasLiked ? (prev[postId] ?? 0) + 1 : Math.max((prev[postId] ?? 0) - 1, 0) }));
     }
   };
 
-  // Клик по кнопке репоста открывает окно для создания ИЛИ редактирования
-  const handleRepostClick = (postId: number) => {
-    setRepostModalTargetId(postId);
-  };
+  const handleRepostClick = (postId: number) => setRepostModalTargetId(postId);
 
-  // Подтверждение создания/изменения текста
   const handleConfirmRepost = (text: string) => {
     if (repostModalTargetId !== null) {
       const id = repostModalTargetId;
-      // Если это новый репост, увеличиваем счетчик
-      if (!isReposted[id]) {
-        setFakeReposts((prev) => ({ ...prev, [id]: (prev[id] ?? 0) + 1 }));
-      }
+      if (!isReposted[id]) setFakeReposts((prev) => ({ ...prev, [id]: (prev[id] ?? 0) + 1 }));
       setIsReposted((prev) => ({ ...prev, [id]: true }));
       setRepostTexts((prev) => ({ ...prev, [id]: text || "Добавьте ваше мнение..." }));
       setRepostModalTargetId(null);
     }
   };
 
-  // Полное удаление репоста
   const handleDeleteRepost = () => {
     if (repostModalTargetId !== null) {
       const id = repostModalTargetId;
@@ -540,11 +490,9 @@ const PostsSection = () => {
   const getCurrentIndex = (postId: number) => currentIndexes[postId] ?? 0;
   const setPostIndex = (postId: number, index: number) => setCurrentIndexes((prev) => ({ ...prev, [postId]: index }));
   const isMuted = (postId: number) => mutedPosts[postId] ?? true;
-  const toggleMute = (postId: number) => setMutedPosts((prev) => ({ ...prev, [postId]: !prev[postId] }));
+  const toggleMute = (postId: number) => setMutedPosts((prev) => ({ ...prev, [postId]: !isMuted(postId) }));
 
-  if (isLoading) {
-    return <div className="h-screen flex items-center justify-center">Loading...</div>;
-  }
+  if (isLoading) return <div className="h-screen flex items-center justify-center">Loading...</div>;
 
   return (
     <>
@@ -556,11 +504,12 @@ const PostsSection = () => {
           const repostCount = fakeReposts[post.postId] ?? 30;
           const userHasReposted = isReposted[post.postId] ?? false;
           const currentRepostText = repostTexts[post.postId] || "Добавьте ваше мнение...";
+          const hasVideo = (post.images ?? []).some((img: string) => img.match(/\.(mp4|webm|ogg)$/i));
 
           return (
             <div key={post.postId} className="w-full max-w-[468px] mb-8 bg-white">
-              
-              {/* 1. INSTAGRAM HEADER */}
+
+              {/* HEADER */}
               <div className="flex justify-between items-center py-2.5">
                 <div className="flex items-center gap-3">
                   <img
@@ -575,7 +524,7 @@ const PostsSection = () => {
                 </button>
               </div>
 
-              {/* 2. INSTAGRAM MEDIA FEED — SWIPER */}
+              {/* MEDIA */}
               <div
                 className="relative aspect-square bg-gray-50 border border-gray-100 rounded-[4px] overflow-hidden cursor-pointer"
                 onClick={() => setActivePost(post)}
@@ -584,7 +533,7 @@ const PostsSection = () => {
                 {userHasReposted && (
                   <div
                     onClick={(e) => { e.stopPropagation(); handleRepostClick(post.postId); }}
-                    className="absolute bottom-4 left-4 z-20 flex flex-col items-start cursor-pointer group active:scale-95 transition-transform"
+                    className="absolute bottom-4 left-4 z-20 flex flex-col items-start cursor-pointer active:scale-95 transition-transform"
                   >
                     <div className="bg-white/95 backdrop-blur-xs text-gray-800 text-[12px] font-normal px-3 py-1.5 rounded-2xl shadow-lg max-w-[140px] break-words relative mb-1.5 border border-gray-100/50 text-center flex items-center justify-center min-w-[60px]">
                       {currentRepostText}
@@ -620,103 +569,75 @@ const PostsSection = () => {
                     <SwiperSlide key={idx} className="w-full h-full">
                       <div className="relative w-full h-full">
                         {img.match(/\.(mp4|webm|ogg)$/i) ? (
-                          <video
-                            src={`${Api}/images/${img}`}
-                            className="w-full h-full object-cover"
-                            muted={isMuted(post.postId)}
-                            autoPlay loop playsInline
-                          />
+                          <>
+                            {/* AutoPlayVideo — играет только когда виден на экране */}
+                            <AutoPlayVideo
+                              src={`${Api}/images/${img}`}
+                              muted={isMuted(post.postId)}
+                              className="w-full h-full object-cover"
+                            />
+                            {/* Кнопка звука */}
+                            <button
+                              onClick={(e) => { e.stopPropagation(); toggleMute(post.postId); }}
+                              className="absolute bottom-3 right-3 bg-black/60 text-white rounded-full w-7 h-7 flex items-center justify-center z-10"
+                            >
+                              {isMuted(post.postId) ? <VolumeOffIcon style={{ fontSize: 15 }} /> : <VolumeUpIcon style={{ fontSize: 15 }} />}
+                            </button>
+                          </>
                         ) : (
                           <img src={`${Api}/images/${img}`} className="w-full h-full object-cover" alt="" />
-                        )}
-                        {img.match(/\.(mp4|webm|ogg)$/i) && (
-                          <button
-                            onClick={(e) => { e.stopPropagation(); toggleMute(post.postId); }}
-                            className="absolute bottom-3 right-3 bg-black/60 text-white rounded-full w-7 h-7 flex items-center justify-center z-10"
-                          >
-                            {isMuted(post.postId) ? <VolumeOffIcon style={{ fontSize: 15 }} /> : <VolumeUpIcon style={{ fontSize: 15 }} />}
-                          </button>
                         )}
                       </div>
                     </SwiperSlide>
                   ))}
                 </Swiper>
 
-                {/* Prev/Next buttons — only for multi-image posts */}
                 {(post.images?.length ?? 0) > 1 && (
                   <>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); swiperRefs.current[post.postId]?.slidePrev(); }}
-                      className="absolute left-2 top-1/2 -translate-y-1/2 z-20 bg-black/50 hover:bg-black/70 text-white w-7 h-7 rounded-full flex items-center justify-center text-sm transition-colors"
-                    >
-                      ❮
-                    </button>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); swiperRefs.current[post.postId]?.slideNext(); }}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 z-20 bg-black/50 hover:bg-black/70 text-white w-7 h-7 rounded-full flex items-center justify-center text-sm transition-colors"
-                    >
-                      ❯
-                    </button>
+                    <button onClick={(e) => { e.stopPropagation(); swiperRefs.current[post.postId]?.slidePrev(); }} className="absolute left-2 top-1/2 -translate-y-1/2 z-20 bg-black/50 hover:bg-black/70 text-white w-7 h-7 rounded-full flex items-center justify-center text-sm transition-colors">❮</button>
+                    <button onClick={(e) => { e.stopPropagation(); swiperRefs.current[post.postId]?.slideNext(); }} className="absolute right-2 top-1/2 -translate-y-1/2 z-20 bg-black/50 hover:bg-black/70 text-white w-7 h-7 rounded-full flex items-center justify-center text-sm transition-colors">❯</button>
                   </>
                 )}
               </div>
 
-              {/* 3. INSTAGRAM ACTION BUTTONS */}
+              {/* ACTIONS */}
               <div className="flex justify-between items-center pt-3 pb-2">
                 <div className="flex gap-4 items-center">
                   <div className="flex items-center gap-1">
-                    <button
-                    onClick={() => handleLike(post.postId)}
-                    className="hover:scale-105 active:scale-90 transition-transform text-gray-900"
-                  >
-                    {isLiked ? <FavoriteIcon className="text-red-500" sx={{ fontSize: 26 }} /> : <FavoriteBorderIcon sx={{ fontSize: 26 }} />}
-                  
-                  </button>
-                  <span>{likeCount.toLocaleString()}</span>
+                    <button onClick={() => handleLike(post.postId)} className="hover:scale-105 active:scale-90 transition-transform text-gray-900">
+                      {isLiked ? <FavoriteIcon className="text-red-500" sx={{ fontSize: 26 }} /> : <FavoriteBorderIcon sx={{ fontSize: 26 }} />}
+                    </button>
+                    <span>{likeCount.toLocaleString()}</span>
                   </div>
-                  
-                    <div className="flex items-center gap-1">
-                      <button
-                    onClick={() => setActivePost(post)}
-                    className="hover:scale-105 active:scale-90 transition-transform text-gray-900"
-                  >
-                    <ChatBubbleOutlineIcon sx={{ fontSize: 24 }} />
-                  </button>
-                  <span >{commentCount}</span>
-                    </div>
-                  
                   <div className="flex items-center gap-1">
-                    <button 
-                    onClick={() => handleRepostClick(post.postId)}
-                    className={`hover:scale-105 active:scale-90 transition-all ${userHasReposted ? 'text-[#783bf2]' : 'text-gray-900'}`}
-                  >
-                    <RepeatIcon sx={{ fontSize: 26 }} />
-                  </button>
-                  <span className={userHasReposted ? "text-[#783bf2] font-medium" : ""}>
-                     {repostCount}
-                  </span>
+                    <button onClick={() => setActivePost(post)} className="hover:scale-105 active:scale-90 transition-transform text-gray-900">
+                      <ChatBubbleOutlineIcon sx={{ fontSize: 24 }} />
+                    </button>
+                    <span>{commentCount}</span>
                   </div>
-                  
+                  <div className="flex items-center gap-1">
+                    <button onClick={() => handleRepostClick(post.postId)} className={`hover:scale-105 active:scale-90 transition-all ${userHasReposted ? "text-[#783bf2]" : "text-gray-900"}`}>
+                      <RepeatIcon sx={{ fontSize: 26 }} />
+                    </button>
+                    <span className={userHasReposted ? "text-[#783bf2] font-medium" : ""}>{repostCount}</span>
+                  </div>
                 </div>
-
                 <button onClick={() => toggleFavorite(post.postId)} className="text-gray-900">
                   {favorites.includes(post.postId) ? <BookmarkIcon sx={{ fontSize: 24 }} /> : <BookmarkBorderIcon sx={{ fontSize: 24 }} />}
                 </button>
               </div>
 
-
-              {/* 5. INSTAGRAM DESCRIPTION */}
+              {/* DESCRIPTION */}
               <div className="text-[13px] leading-4 text-gray-900 break-words">
                 <span className="font-semibold mr-1.5">{post.userName}</span>
                 <span className="text-gray-800 font-normal">{post.description}</span>
               </div>
-
             </div>
           );
         })}
       </div>
 
-      {/* CONTROLLED REPOST / NOTE MODAL */}
+      {/* REPOST MODAL */}
       <RepostModal
         isOpen={repostModalTargetId !== null}
         currentText={repostModalTargetId !== null ? (repostTexts[repostModalTargetId] || "") : ""}

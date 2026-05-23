@@ -274,7 +274,6 @@ export default function Sidebar() {
             </div>
             <span className={`text-[15px] tracking-wide whitespace-nowrap ${openSearch ? "hidden" : "opacity-0 group-hover:opacity-100"}`}>
               Notifications
-              Notifications
             </span>
           </Link>
 
