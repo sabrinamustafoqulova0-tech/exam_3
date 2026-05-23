@@ -37,6 +37,21 @@ const Login = () => {
       console.log(err);
     }
   }
+
+  const getErrorMessage = () => {
+    if (!error) return null;
+    if ("data" in error && typeof error.data === "object" && error.data !== null) {
+      const errorData = error.data as any;
+      if (errorData.errors && Array.isArray(errorData.errors) && errorData.errors.length > 0) {
+        return errorData.errors[0];
+      }
+      if (errorData.message) {
+        return errorData.message;
+      }
+    }
+    return "Ошибка при регистрации. Пожалуйста, попробуйте еще раз.";
+  };
+
   return (
     <div className="min-h-screen bg-white flex items-center justify-center px-4">
       <div className="flex gap-[150px] justify-center items-center gap-8">

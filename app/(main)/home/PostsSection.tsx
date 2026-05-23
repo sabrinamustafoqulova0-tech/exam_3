@@ -23,6 +23,7 @@ import { Api, GetUserId } from "@/app/utils/token";
 import {
   useAddCommentMutation,
   useGetFollowingPostsQuery,
+  useGetPostsQuery,
   useLikePostMutation,
   useFavoritePostMutation,
   useGetUsersQuery,

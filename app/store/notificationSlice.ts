@@ -61,6 +61,21 @@ const notificationSlice = createSlice({
   name: "notifications",
   initialState,
   reducers: {
+    initializeNotifications: (state) => {
+      if (typeof window !== "undefined") {
+        const saved = localStorage.getItem("instagram_notifications")
+        if (saved) {
+          try {
+            state.items = JSON.parse(saved)
+            return
+          } catch (e) {
+            console.error("Failed to parse notifications from localStorage", e)
+          }
+        }
+        // If no cache, initialize cache with initial items
+        localStorage.setItem("instagram_notifications", JSON.stringify(state.items))
+      }
+    },
     addNotification: (
       state,
       action: PayloadAction<Omit<INotification, "id" | "isRead" | "createdAt">>
@@ -72,25 +87,38 @@ const notificationSlice = createSlice({
         createdAt: new Date().toISOString(),
       }
       state.items.unshift(newNotification)
+      if (typeof window !== "undefined") {
+        localStorage.setItem("instagram_notifications", JSON.stringify(state.items))
+      }
     },
     readNotification: (state, action: PayloadAction<string>) => {
       const notification = state.items.find((item) => item.id === action.payload)
       if (notification) {
         notification.isRead = true
       }
+      if (typeof window !== "undefined") {
+        localStorage.setItem("instagram_notifications", JSON.stringify(state.items))
+      }
     },
     readAllNotifications: (state) => {
       state.items.forEach((item) => {
         item.isRead = true
       })
+      if (typeof window !== "undefined") {
+        localStorage.setItem("instagram_notifications", JSON.stringify(state.items))
+      }
     },
     clearNotifications: (state) => {
       state.items = []
+      if (typeof window !== "undefined") {
+        localStorage.setItem("instagram_notifications", JSON.stringify([]))
+      }
     },
   },
 })
 
 export const {
+  initializeNotifications,
   addNotification,
   readNotification,
   readAllNotifications,

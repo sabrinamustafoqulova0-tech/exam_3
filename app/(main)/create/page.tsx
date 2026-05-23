@@ -149,8 +149,9 @@ const processProcessedImage = (
 
 export default function CreatePostPage() {
   const [step, setStep] = useState<Step>("upload")
-  const [imageFile, setImageFile] = useState<File | null>(null)
-  const [imageURL, setImageURL] = useState<string | null>(null)
+  const [imageFiles, setImageFiles] = useState<File[]>([])
+  const [imageURLs, setImageURLs] = useState<string[]>([])
+  const [activeIndex, setActiveIndex] = useState(0)
   const [dragActive, setDragActive] = useState(false)
   const [ratio, setRatio] = useState("original")
   const [shaking, setShaking] = useState(false)
@@ -168,12 +169,12 @@ export default function CreatePostPage() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [addPost] = useAddPostMutation()
 
-  // Clean up object URL when component unmounts
+  // Clean up object URLs when component unmounts
   useEffect(() => {
     return () => {
-      if (imageURL) URL.revokeObjectURL(imageURL)
+      imageURLs.forEach((url) => URL.revokeObjectURL(url))
     }
-  }, [imageURL])
+  }, [imageURLs])
 
   // Shake animation when aspect ratio changes
   const triggerShake = () => {
@@ -186,24 +187,27 @@ export default function CreatePostPage() {
     triggerShake()
   }
 
-  // Handle selected image file
-  const processFile = useCallback((file: File) => {
-    if (!file.type.startsWith("image/")) {
-      alert("Please select a valid image file.")
+  // Handle selected image files
+  const processFiles = useCallback((files: File[]) => {
+    const validFiles = files.filter(f => f.type.startsWith("image/"))
+    if (validFiles.length === 0) {
+      alert("Please select valid image files.")
       return
     }
-    if (imageURL) URL.revokeObjectURL(imageURL)
-    setImageFile(file)
-    setImageURL(URL.createObjectURL(file))
+    imageURLs.forEach((url) => URL.revokeObjectURL(url))
+    const urls = validFiles.map((f) => URL.createObjectURL(f))
+    setImageFiles(validFiles)
+    setImageURLs(urls)
+    setActiveIndex(0)
     setStep("crop")
-  }, [imageURL])
+  }, [imageURLs])
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault()
     e.stopPropagation()
     setDragActive(false)
-    if (e.dataTransfer.files?.[0]) {
-      processFile(e.dataTransfer.files[0])
+    if (e.dataTransfer.files) {
+      processFiles(Array.from(e.dataTransfer.files))
     }
   }
 
@@ -215,27 +219,30 @@ export default function CreatePostPage() {
 
   // Publish Post to Feed
   const handlePublish = async () => {
-    if (!imageFile) return
+    if (imageFiles.length === 0) return
     setIsPublishing(true)
     try {
-      let finalFile = imageFile
+      let finalFiles = [...imageFiles]
       try {
-        finalFile = await processProcessedImage(imageFile, selectedFilter, ratio)
+        finalFiles = await Promise.all(
+          imageFiles.map((file) => processProcessedImage(file, selectedFilter, ratio))
+        )
       } catch (procErr) {
-        console.warn("Failed to apply filters, sharing original image:", procErr)
+        console.warn("Failed to apply filters, sharing original images:", procErr)
       }
 
       const fullCaption = location ? `${caption}\n\n📍 ${location}` : caption
       await addPost({
         title: fullCaption,
         content: fullCaption,
-        images: [finalFile],
+        images: finalFiles,
       }).unwrap()
       setSuccessModal(true)
       // reset
       setStep("upload")
-      setImageFile(null)
-      setImageURL(null)
+      setImageFiles([])
+      setImageURLs([])
+      setActiveIndex(0)
       setCaption("")
       setLocation("")
       setSelectedFilter("none")
@@ -254,8 +261,9 @@ export default function CreatePostPage() {
   const goBack = () => {
     if (step === "crop") {
       setStep("upload")
-      setImageFile(null)
-      setImageURL(null)
+      setImageFiles([])
+      setImageURLs([])
+      setActiveIndex(0)
     }
     if (step === "filter") setStep("crop")
     if (step === "caption") setStep("filter")
@@ -361,7 +369,8 @@ export default function CreatePostPage() {
                   ref={fileInputRef}
                   type="file"
                   accept="image/*"
-                  onChange={(e) => e.target.files?.[0] && processFile(e.target.files[0])}
+                  multiple
+                  onChange={(e) => e.target.files && processFiles(Array.from(e.target.files))}
                   className="hidden"
                 />
 
@@ -388,7 +397,7 @@ export default function CreatePostPage() {
           )}
 
           {/* ══════════════════════ STEP: CROP ══════════════════════ */}
-          {step === "crop" && imageURL && (
+          {step === "crop" && imageURLs.length > 0 && (
             <>
               {/* Left Side: Large interactive preview */}
               <div className="flex-1 bg-black flex items-center justify-center p-6 select-none relative" style={{ minHeight: 460 }}>
@@ -405,12 +414,48 @@ export default function CreatePostPage() {
                   }}
                 >
                   <img
-                    src={imageURL}
+                    src={imageURLs[activeIndex]}
                     alt="crop preview"
                     className="w-full h-full object-cover block select-none"
                     draggable={false}
                     style={filterStyle}
                   />
+
+                  {/* Carousel Left/Right navigation buttons */}
+                  {activeIndex > 0 && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setActiveIndex(activeIndex - 1); }}
+                      className="absolute left-3 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/80 text-white rounded-full p-1.5 backdrop-blur-sm transition z-10 cursor-pointer"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+                      </svg>
+                    </button>
+                  )}
+                  {activeIndex < imageURLs.length - 1 && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setActiveIndex(activeIndex + 1); }}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/80 text-white rounded-full p-1.5 backdrop-blur-sm transition z-10 cursor-pointer"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                      </svg>
+                    </button>
+                  )}
+
+                  {/* Dots Indicator */}
+                  {imageURLs.length > 1 && (
+                    <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 z-10 bg-black/20 px-2 py-1 rounded-full backdrop-blur-[2px]">
+                      {imageURLs.map((_, idx) => (
+                        <div
+                          key={idx}
+                          className={`w-1.5 h-1.5 rounded-full transition-all duration-150 ${
+                            activeIndex === idx ? "bg-[#0095f6] scale-110" : "bg-white/60"
+                          }`}
+                        />
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -440,10 +485,10 @@ export default function CreatePostPage() {
           )}
 
           {/* ══════════════════════ STEP: FILTER ══════════════════════ */}
-          {step === "filter" && imageURL && (
+          {step === "filter" && imageURLs.length > 0 && (
             <>
               {/* Left Side: Large interactive preview */}
-              <div className="flex-1 bg-black flex items-center justify-center p-6 select-none" style={{ minHeight: 460 }}>
+              <div className="flex-1 bg-black flex items-center justify-center p-6 select-none relative" style={{ minHeight: 460 }}>
                 <div
                   style={{
                     aspectRatio: ratio === "original" ? "auto" : ratio,
@@ -453,14 +498,51 @@ export default function CreatePostPage() {
                     overflow: "hidden",
                     boxShadow: "0 10px 25px rgba(0,0,0,0.5)",
                   }}
+                  className="relative"
                 >
                   <img
-                    src={imageURL}
+                    src={imageURLs[activeIndex]}
                     alt="filter preview"
                     className="w-full h-full object-cover block select-none"
                     draggable={false}
                     style={filterStyle}
                   />
+
+                  {/* Carousel Left/Right navigation buttons */}
+                  {activeIndex > 0 && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setActiveIndex(activeIndex - 1); }}
+                      className="absolute left-3 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/80 text-white rounded-full p-1.5 backdrop-blur-sm transition z-10 cursor-pointer"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+                      </svg>
+                    </button>
+                  )}
+                  {activeIndex < imageURLs.length - 1 && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setActiveIndex(activeIndex + 1); }}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/80 text-white rounded-full p-1.5 backdrop-blur-sm transition z-10 cursor-pointer"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                      </svg>
+                    </button>
+                  )}
+
+                  {/* Dots Indicator */}
+                  {imageURLs.length > 1 && (
+                    <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 z-10 bg-black/20 px-2 py-1 rounded-full backdrop-blur-[2px]">
+                      {imageURLs.map((_, idx) => (
+                        <div
+                          key={idx}
+                          className={`w-1.5 h-1.5 rounded-full transition-all duration-150 ${
+                            activeIndex === idx ? "bg-[#0095f6] scale-110" : "bg-white/60"
+                          }`}
+                        />
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -481,7 +563,7 @@ export default function CreatePostPage() {
                       {/* Stylized small preview thumbnail */}
                       <div className="w-full aspect-square rounded-lg overflow-hidden border border-gray-200">
                         <img
-                          src={imageURL}
+                          src={imageURLs[activeIndex]}
                           alt={f.name}
                           className="w-full h-full object-cover"
                           style={{ filter: f.css === "none" ? "none" : f.css }}
@@ -500,10 +582,10 @@ export default function CreatePostPage() {
           )}
 
           {/* ══════════════════════ STEP: CAPTION ══════════════════════ */}
-          {step === "caption" && imageURL && (
+          {step === "caption" && imageURLs.length > 0 && (
             <>
               {/* Left Side: Large interactive preview */}
-              <div className="flex-1 bg-black flex items-center justify-center p-6 select-none" style={{ minHeight: 460 }}>
+              <div className="flex-1 bg-black flex items-center justify-center p-6 select-none relative" style={{ minHeight: 460 }}>
                 <div
                   style={{
                     aspectRatio: ratio === "original" ? "auto" : ratio,
@@ -513,14 +595,51 @@ export default function CreatePostPage() {
                     overflow: "hidden",
                     boxShadow: "0 10px 25px rgba(0,0,0,0.5)",
                   }}
+                  className="relative"
                 >
                   <img
-                    src={imageURL}
+                    src={imageURLs[activeIndex]}
                     alt="final preview"
                     className="w-full h-full object-cover block select-none"
                     draggable={false}
                     style={filterStyle}
                   />
+
+                  {/* Carousel Left/Right navigation buttons */}
+                  {activeIndex > 0 && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setActiveIndex(activeIndex - 1); }}
+                      className="absolute left-3 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/80 text-white rounded-full p-1.5 backdrop-blur-sm transition z-10 cursor-pointer"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+                      </svg>
+                    </button>
+                  )}
+                  {activeIndex < imageURLs.length - 1 && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setActiveIndex(activeIndex + 1); }}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/80 text-white rounded-full p-1.5 backdrop-blur-sm transition z-10 cursor-pointer"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                      </svg>
+                    </button>
+                  )}
+
+                  {/* Dots Indicator */}
+                  {imageURLs.length > 1 && (
+                    <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 z-10 bg-black/20 px-2 py-1 rounded-full backdrop-blur-[2px]">
+                      {imageURLs.map((_, idx) => (
+                        <div
+                          key={idx}
+                          className={`w-1.5 h-1.5 rounded-full transition-all duration-150 ${
+                            activeIndex === idx ? "bg-[#0095f6] scale-110" : "bg-white/60"
+                          }`}
+                        />
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
 

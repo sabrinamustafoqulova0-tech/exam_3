@@ -25,8 +25,96 @@ import {
   useAddFollowingMutation,
   useDeleteFollowingMutation,
 } from "@/app/services/Reels"
+import { useGetMyProfileQuery } from "@/app/services/publication.home"
+
 
 const API_IMAGE = "https://instagram-api.softclub.tj/images/"
+
+const ReelHeartIcon = ({ active }: { active: boolean }) => (
+  <svg
+    viewBox="0 0 24 24"
+    fill={active ? "#ff3040" : "none"}
+    stroke={active ? "#ff3040" : "currentColor"}
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={`h-7 w-7 transition-all duration-200 ${active ? "animate-scale-up text-[#ff3040]" : "text-black"}`}
+  >
+    <path d="M20.84 4.61c-1.54-1.33-3.84-1.14-5.26.32L12 8.6 8.42 4.93C7 3.47 4.7 3.28 3.16 4.61 1.39 6.14 1.3 8.85 2.95 10.55l8.2 8.45a1.18 1.18 0 0 0 1.7 0l8.2-8.45c1.65-1.7 1.56-4.41-.21-5.94Z" />
+  </svg>
+)
+
+const ReelCommentIcon = () => (
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className="h-7 w-7 text-black"
+  >
+    <path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5 8.8 8.8 0 0 1-3.8-.86L3 21l1.86-5.7A8.8 8.8 0 0 1 4 11.5a8.5 8.5 0 0 1 17 0Z" />
+  </svg>
+)
+
+const ReelRepostIcon = ({ active }: { active?: boolean }) => (
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={`h-7 w-7 transition-all duration-200 ${active ? "animate-scale-up text-violet-600" : "text-black"}`}
+  >
+    <path d="M17 2l4 4-4 4" />
+    <path d="M3 11V9a3 3 0 0 1 3-3h15" />
+    <path d="M7 22l-4-4 4-4" />
+    <path d="M21 13v2a3 3 0 0 1-3 3H3" />
+    {active && (
+      <path
+        d="M9 12.5l2 2 4-4"
+        stroke="currentColor"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className="animate-scale-up"
+      />
+    )}
+  </svg>
+)
+
+
+const ReelSendIcon = () => (
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className="h-7 w-7 text-black"
+  >
+    <path d="M22 2 11 13" />
+    <path d="M22 2 15 22 11 13 2 9 22 2Z" />
+  </svg>
+)
+
+const ReelSaveIcon = ({ active }: { active: boolean }) => (
+  <svg
+    viewBox="0 0 24 24"
+    fill={active ? "currentColor" : "none"}
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={`h-7 w-7 transition-all duration-200 ${active ? "animate-scale-up text-black fill-black" : "text-black"}`}
+  >
+    <path d="M6 3h12a1 1 0 0 1 1 1v17l-7-4-7 4V4a1 1 0 0 1 1-1Z" />
+  </svg>
+)
+
 
 const EMOJI_CATEGORIES: Record<string, string[]> = {
   "🔥 Popular": ["😂", "😍", "😭", "👍", "❤️", "🔥", "👏", "🎉", "💔", "🤔", "🙌", "😎", "😮", "😡", "🙄", "🤫", "✨", "💯"],
@@ -38,17 +126,17 @@ const EMOJI_CATEGORIES: Record<string, string[]> = {
 export default function ReelsPage() {
   const { data, isLoading, isError, error } = useGetReelsQuery({
     PageNumber: 1,
-    PageSize: 15,
+    PageSize: 10,
   })
 
   const [isMuted, setIsMuted] = useState(true)
 
   if (isLoading) {
     return (
-      <div className="flex h-full w-full items-center justify-center bg-black text-white">
+      <div className="flex h-full w-full items-center justify-center bg-white text-black">
         <div className="flex flex-col items-center gap-3">
-          <div className="h-10 w-10 animate-spin rounded-full border-4 border-white/10 border-t-pink-600"></div>
-          <span className="text-sm font-medium text-gray-400">Loading Reels...</span>
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-gray-200 border-t-pink-600"></div>
+          <span className="text-sm font-medium text-gray-500">Loading Reels...</span>
         </div>
       </div>
     )
@@ -56,13 +144,13 @@ export default function ReelsPage() {
 
   if (isError) {
     return (
-      <div className="flex h-full w-full flex-col items-center justify-center gap-4 bg-black text-red-500 px-6">
-        <div className="rounded-2xl border border-red-500/20 bg-red-500/5 p-6 text-center max-w-md">
-          <h1 className="text-xl font-extrabold mb-2">Error Loading Reels</h1>
-          <p className="text-sm text-gray-400 mb-4">
+      <div className="flex h-full w-full flex-col items-center justify-center gap-4 bg-white text-red-500 px-6">
+        <div className="rounded-2xl border border-red-200 bg-red-50/50 p-6 text-center max-w-md">
+          <h1 className="text-xl font-extrabold mb-2 text-red-600">Error Loading Reels</h1>
+          <p className="text-sm text-gray-500 mb-4">
             Could not fetch the latest Reels feed. Please check your token or try again.
           </p>
-          <pre className="rounded-xl bg-black/80 p-3 text-xs text-left overflow-x-auto border border-white/5">
+          <pre className="rounded-xl bg-gray-50 p-3 text-xs text-left overflow-x-auto border border-gray-200 text-gray-700">
             {JSON.stringify(error, null, 2)}
           </pre>
         </div>
@@ -119,7 +207,10 @@ function ReelCard({
   isMuted: boolean
   setIsMuted: (val: boolean) => void
 }) {
+  const { data: myProfile } = useGetMyProfileQuery()
+  const myUserName = myProfile?.data?.userName || myProfile?.userName || "you"
   const videoRef = useRef<HTMLVideoElement | null>(null)
+
   const [playing, setPlaying] = useState(false)
   const [isLiked, setIsLiked] = useState(reel.postLike || false)
   const [likeCount, setLikeCount] = useState(reel.postLikeCount || 0)
@@ -127,7 +218,7 @@ function ReelCard({
   const [showHeartPop, setShowHeartPop] = useState(false)
   const [showMuteIndicator, setShowMuteIndicator] = useState(false)
   const [showComments, setShowComments] = useState(false)
-  const [isFollowed, setIsFollowed] = useState(reel.isSubscriber || false) // Bind to Swagger subscriber field
+  const [isFollowed, setIsFollowed] = useState(reel.isSubscriber || false) 
   const [isExpanded, setIsExpanded] = useState(false)
   const [toastMessage, setToastMessage] = useState<string | null>(null)
   const [showMoreMenu, setShowMoreMenu] = useState(false)
@@ -135,6 +226,13 @@ function ReelCard({
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)
   const [shareCount, setShareCount] = useState(() => Math.floor(Math.random() * 480) + 20)
   const [activeCategory, setActiveCategory] = useState<string>("🔥 Popular")
+  const [isReposted, setIsReposted] = useState(false)
+  const [repostCount, setRepostCount] = useState(() => Math.floor((reel.postLikeCount || 0) * 0.4) + 12)
+  const [showRepostModal, setShowRepostModal] = useState(false)
+  const [repostMessage, setRepostMessage] = useState("")
+  const [tempMessage, setTempMessage] = useState("")
+
+
 
   // Determine media type (Video or Image) from filename
   const isVideo = reel.images
@@ -148,15 +246,15 @@ function ReelCard({
   const [addFollowing] = useAddFollowingMutation()
   const [deleteFollowing] = useDeleteFollowingMutation()
 
-  // Local comments state to make it interactive and display instantly
+  // Local comments state to map c.content and c.datePublished
   const [comments, setComments] = useState<CommentItem[]>(
     (reel.comments || []).map((c: any, index: number) => ({
       id: c.postCommentId || index,
       userName: c.userName || "anonymous",
       userImage: c.userImage,
-      comment: c.comment,
-      date: c.dateCommented || new Date().toISOString(),
-      likes: Math.floor(Math.random() * 800),
+      comment: c.content || c.comment || "",
+      date: c.datePublished || c.dateCommented || new Date().toISOString(),
+      likes: Math.floor(Math.random() * 120) + 5,
       isLiked: false,
     }))
   )
@@ -244,7 +342,6 @@ function ReelCard({
     setTimeout(() => setShowMuteIndicator(false), 800)
   }
 
-  
   const handleLike = async (e?: React.MouseEvent) => {
     if (e) e.stopPropagation()
     const nextLiked = !isLiked
@@ -261,7 +358,7 @@ function ReelCard({
     }
   }
 
-  // Double tap vs Single tap click system using useRef
+  // Double tap vs Single tap click system
   const clickTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   const handleMediaClick = (e: React.MouseEvent) => {
@@ -288,7 +385,7 @@ function ReelCard({
     }
   }
 
-  // Real-time optimistic Bookmark integration
+  // Real-time Bookmark integration
   const handleBookmark = async (e: React.MouseEvent) => {
     e.stopPropagation()
     const nextBookmarked = !isBookmarked
@@ -304,7 +401,7 @@ function ReelCard({
     }
   }
 
-  // Real-time optimistic Follow integration
+  // Real-time Follow integration
   const handleFollowToggle = async (e: React.MouseEvent) => {
     e.stopPropagation()
     const nextFollowed = !isFollowed
@@ -334,8 +431,6 @@ function ReelCard({
     })
   }
 
-
-
   // Real-time optimistic Comment integration
   const handleAddComment = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -347,11 +442,12 @@ function ReelCard({
     // Add locally for optimistic UI responsiveness
     const newComment: CommentItem = {
       id: tempId,
-      userName: "you",
-      userImage: null,
+      userName: myUserName,
+      userImage: myProfile?.data?.userImage || myProfile?.userImage || null,
       comment: commentText,
       date: new Date().toISOString(),
     }
+
 
     setComments((prev) => [{ ...newComment, likes: 0, isLiked: false }, ...prev])
     setNewCommentText("")
@@ -368,7 +464,7 @@ function ReelCard({
   }
 
   return (
-    <section className="flex h-screen w-full snap-start items-center justify-center bg-white py-2 relative select-none">
+    <section className="flex h-screen w-full snap-start items-center justify-center bg-white py-2 relative select-none text-black">
 
       {/* ── Instagram-style RIGHT SIDE comments drawer ── */}
       {showComments && (
@@ -424,7 +520,7 @@ function ReelCard({
                       </div>
                       <div className="flex items-center gap-3 mt-1">
                         <span className="text-[11px] text-gray-500">
-                          {new Date(comment.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                          {new Date(comment.date).toLocaleDateString("ru-RU", { month: "short", day: "numeric" })}
                         </span>
                         {comment.likes > 0 && (
                           <span className="text-[11px] text-gray-500">{comment.likes} likes</span>
@@ -582,6 +678,51 @@ function ReelCard({
           {/* Bottom Reel Details overlay */}
           <div className="absolute bottom-6 left-4 right-16 z-20 text-white pointer-events-auto flex flex-col gap-1.5 select-none">
             {/* User Meta Row */}
+            {/* Repost Comment Bubble and Avatar Overlay (Separate block above the metadata) */}
+            {isReposted && (
+              <div
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setTempMessage(repostMessage === "Добавьте ваше мнение..." ? "" : repostMessage)
+                  setShowRepostModal(true)
+                }}
+                className="flex flex-col items-start mb-2 relative group self-start cursor-pointer hover:scale-[1.03] transition duration-150 active:scale-95"
+              >
+                {/* Speech Bubble */}
+                <div className="relative bg-white text-black text-[12px] font-semibold px-3.5 py-1.5 rounded-2xl shadow-lg mb-2 animate-bounce-slow max-w-[160px] break-words">
+                  {repostMessage || "Добавьте ваше мнение..."}
+                  {/* Arrow pointing down */}
+                  <div className="absolute -bottom-1 left-4 w-2 h-2 bg-white rotate-45"></div>
+                </div>
+                
+                {/* Avatar with purple badge */}
+                <div className="relative ml-2">
+                  <div className="h-8 w-8 rounded-full border border-white/20 bg-gray-300 flex items-center justify-center text-gray-500 shadow-md">
+                    <svg className="h-4.5 w-4.5" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <div className="absolute -bottom-1 -right-1 flex h-4.5 w-4.5 items-center justify-center rounded-full bg-violet-600 border border-white/20 shadow-lg animate-scale-up">
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="white"
+                      strokeWidth="3.2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="h-2.5 w-2.5"
+                    >
+                      <path d="M17 2l4 4-4 4" />
+                      <path d="M3 11V9a3 3 0 0 1 3-3h15" />
+                      <path d="M7 22l-4-4 4-4" />
+                      <path d="M21 13v2a3 3 0 0 1-3 3H3" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+            )}
+
+
             <div className="flex items-center gap-2 flex-wrap">
               <img
                 src={
@@ -592,6 +733,8 @@ function ReelCard({
                 alt="user"
                 className="h-8 w-8 rounded-full border border-white/10 object-cover bg-neutral-900"
               />
+
+
               <span className="text-[13px] font-bold tracking-wide truncate max-w-[140px]">
                 {reel.userName || "anonymous"}
               </span>
@@ -650,22 +793,23 @@ function ReelCard({
         </div>
 
         {/* Action Panel (Right Side Icons) */}
-        <div className="flex flex-col items-center gap-6 pb-6 pointer-events-auto select-none">
+        <div className="flex flex-col items-center gap-5 pb-4 pointer-events-auto select-none">
           {/* Like */}
-          <div className="flex flex-col items-center gap-1 group">
+          <div className="group flex flex-col items-center gap-1">
             <button
               onClick={handleLike}
-              className={`flex h-11 w-11 items-center justify-center rounded-full transition duration-200 cursor-pointer active:scale-90 ${
-                isLiked ? "text-red-500" : "text-black hover:text-black/80"
-              }`}
+              className="relative flex h-9 w-9 items-center justify-center transition-all duration-200 hover:scale-110 active:scale-90 cursor-pointer"
             >
               {isLiked ? (
-                <HeartIconSolid className="h-7 w-7 text-red-500 animate-scale-up" />
+                <HeartIconSolid className="h-7 w-7 text-[#ff3040] animate-scale-up" />
               ) : (
-                <HeartIconOutline className="h-7 w-7 transition-transform group-hover:scale-105" />
+                <HeartIconOutline className="h-7 w-7 text-black stroke-[2] transition-all duration-200 group-hover:text-black/60" />
               )}
             </button>
-            <span className="text-[12px] font-medium text-black select-none">{likeCount}</span>
+
+            <span className="text-[12px] font-medium text-black select-none leading-none mt-0.5">
+              {likeCount}
+            </span>
           </div>
 
           {/* Comments */}
@@ -675,42 +819,61 @@ function ReelCard({
                 e.stopPropagation()
                 setShowComments(true)
               }}
-              className="flex h-11 w-11 items-center justify-center rounded-full transition duration-200 text-black hover:text-black/80 cursor-pointer active:scale-90"
+              className="flex h-9 w-9 items-center justify-center transition-all duration-200 hover:scale-110 active:scale-90 cursor-pointer text-black"
             >
-              <ChatBubbleOvalLeftIcon className="h-7 w-7 transition-transform group-hover:scale-105" />
+              <ReelCommentIcon />
             </button>
-            <span className="text-[12px] font-medium text-black select-none">{comments.length}</span>
+            <span className="text-[12px] font-medium text-black select-none leading-none mt-0.5">
+              {comments.length}
+            </span>
           </div>
 
-          {/* Share */}
+          {/* Repost */}
           <div className="flex flex-col items-center gap-1 group">
             <button
-              onClick={handleShare}
-              className="flex h-11 w-11 items-center justify-center rounded-full transition duration-200 text-black hover:text-black/80 cursor-pointer active:scale-90"
+              onClick={(e) => {
+                e.stopPropagation()
+                if (!isReposted) {
+                  setIsReposted(true)
+                  setRepostCount((c) => c + 1)
+                  setRepostMessage("Добавьте ваше мнение...")
+                  triggerToast("Reposted successfully!")
+                } else {
+                  setTempMessage(repostMessage === "Добавьте ваше мнение..." ? "" : repostMessage)
+                  setShowRepostModal(true)
+                }
+              }}
+              className="flex h-9 w-9 items-center justify-center transition-all duration-200 hover:scale-110 active:scale-90 cursor-pointer text-black"
             >
-              {/* Sleek paper airplane icon */}
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-7 h-7 transition-transform group-hover:scale-105">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5" />
-              </svg>
+              <ReelRepostIcon active={isReposted} />
             </button>
-            <span className="text-[12px] font-medium text-black select-none">{shareCount}</span>
+
+
+
+            <span className="text-[12px] font-medium text-black select-none leading-none mt-0.5">
+              {repostCount}
+            </span>
+          </div>
+
+
+          {/* Share */}
+          <div className="flex flex-col items-center group">
+            <button
+              onClick={handleShare}
+              className="flex h-9 w-9 items-center justify-center transition-all duration-200 hover:scale-110 active:scale-90 cursor-pointer text-black"
+            >
+              <ReelSendIcon />
+            </button>
           </div>
 
           {/* Bookmark */}
-          <div className="flex flex-col items-center gap-1 group">
+          <div className="flex flex-col items-center group">
             <button
               onClick={handleBookmark}
-              className={`flex h-11 w-11 items-center justify-center rounded-full transition duration-200 cursor-pointer active:scale-90 ${
-                isBookmarked ? "text-yellow-500" : "text-black hover:text-black/80"
-              }`}
+              className="flex h-9 w-9 items-center justify-center transition-all duration-200 hover:scale-110 active:scale-90 cursor-pointer text-black"
             >
-              {isBookmarked ? (
-                <BookmarkIconSolid className="h-7 w-7 text-yellow-500 animate-scale-up" />
-              ) : (
-                <BookmarkIconOutline className="h-7 w-7 transition-transform group-hover:scale-105" />
-              )}
+              <ReelSaveIcon active={isBookmarked} />
             </button>
-            <span className="text-[10px] font-semibold text-black/50 select-none uppercase tracking-wider mt-0.5">Save</span>
           </div>
 
           {/* More Menu */}
@@ -720,10 +883,11 @@ function ReelCard({
                 e.stopPropagation()
                 setShowMoreMenu(!showMoreMenu)
               }}
-              className="flex h-11 w-11 items-center justify-center text-black hover:text-black/80 transition cursor-pointer active:scale-90"
+              className="flex h-9 w-9 items-center justify-center text-black transition-all duration-200 hover:scale-110 active:scale-90 cursor-pointer"
             >
               <EllipsisHorizontalIcon className="h-7 w-7" />
             </button>
+
 
             {/* Dropdown Options Menu */}
             {showMoreMenu && (
@@ -769,7 +933,7 @@ function ReelCard({
             )}
           </div>
 
-          {/* User Small Avatar (Styled as square outline from audio track disk in first screenshot) */}
+          {/* User Small Avatar */}
           <div className="mt-2 relative group p-0.5 bg-white border border-gray-300 rounded-md overflow-hidden h-7 w-7 cursor-pointer hover:scale-105 transition duration-150">
             <img
               src={
@@ -783,6 +947,103 @@ function ReelCard({
           </div>
         </div>
       </div>
+
+      {/* Repost Dialog (Modal) */}
+      {showRepostModal && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs pointer-events-auto">
+          {/* Modal Card */}
+          <div className="relative w-[90%] max-w-[320px] bg-white rounded-3xl p-6 shadow-2xl flex flex-col items-center text-black animate-scale-up">
+            {/* Close button */}
+            <button
+              onClick={() => setShowRepostModal(false)}
+              className="absolute top-4 left-4 text-gray-400 hover:text-black transition p-1 rounded-full hover:bg-gray-100 cursor-pointer"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+
+            {/* Speech bubble and Avatar group */}
+            <div className="flex flex-col items-center mt-8 mb-6 relative">
+              {/* Speech Bubble Input */}
+              <div className="relative bg-white border border-gray-200 text-black px-4 py-2.5 rounded-2xl shadow-lg mb-4 w-44 max-w-xs flex items-center justify-center">
+                <input
+                  type="text"
+                  placeholder="Добавьте ваше мнение..."
+                  value={tempMessage}
+                  onChange={(e) => setTempMessage(e.target.value)}
+                  className="w-full bg-transparent text-center text-xs font-semibold focus:outline-none placeholder-gray-300 text-black"
+                  autoFocus
+                />
+                {/* Speech bubble arrow */}
+                <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-2.5 h-2.5 bg-white border-r border-b border-gray-200 rotate-45"></div>
+              </div>
+
+              {/* Avatar with purple badge */}
+              <div className="relative">
+                <div className="h-20 w-20 rounded-full border border-gray-100 object-cover bg-gray-200 flex items-center justify-center text-gray-400">
+                  <svg className="h-10 w-10" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <div className="absolute bottom-0 right-0 flex h-6 w-6 items-center justify-center rounded-full bg-violet-600 border-2 border-white shadow-lg animate-scale-up">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="white"
+                    strokeWidth="3.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="h-3.5 w-3.5"
+                  >
+                    <path d="M17 2l4 4-4 4" />
+                    <path d="M3 11V9a3 3 0 0 1 3-3h15" />
+                    <path d="M7 22l-4-4 4-4" />
+                    <path d="M21 13v2a3 3 0 0 1-3 3H3" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+
+            {/* Repost status line */}
+            {isReposted && (
+              <p className="text-xs font-semibold text-gray-400 mb-6 text-center">
+                Вы сделали репост этого контента.{" "}
+                <button
+                  onClick={() => {
+                    setIsReposted(false)
+                    setRepostCount((c) => c - 1)
+                    setRepostMessage("")
+                    setShowRepostModal(false)
+                    triggerToast("Repost removed.")
+                  }}
+                  className="text-blue-500 font-bold hover:underline cursor-pointer ml-1"
+                >
+                  Удалить
+                </button>
+              </p>
+            )}
+
+            {/* Submit button */}
+            <button
+              onClick={() => {
+                if (!isReposted) {
+                  setIsReposted(true)
+                  setRepostCount((c) => c + 1)
+                }
+                setRepostMessage(tempMessage.trim() || "Добавьте ваше мнение...")
+                setShowRepostModal(false)
+                triggerToast("Reposted successfully!")
+              }}
+
+              className="w-full bg-[#b3c7f7] hover:bg-[#9cb6f5] text-white font-bold py-3 px-6 rounded-2xl transition duration-200 cursor-pointer text-center text-xs shadow-xs"
+            >
+              Добавить
+            </button>
+          </div>
+        </div>
+      )}
     </section>
+
   )
 }
