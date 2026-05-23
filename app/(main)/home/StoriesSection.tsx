@@ -208,18 +208,18 @@ const StoriesSection = () => {
             >
               <div
                 className={`
-                  w-[69px] h-[69px]
+                  w-[66px] h-[66px]
                   rounded-full
                   flex items-center justify-center
-                  transition-all duration-300
+                  transition-all duration-300 p-[2px]
                   ${
                     isSeen
-                      ? "border-4 border-gray-400 bg-transparent p-0"
-                      : "border-4 border-red-500 bg-transparent p-0"
+                      ? "bg-[#dbdbdb] hover:bg-[#c7c7c7]"
+                      : "bg-gradient-to-tr from-[#f9ce34] via-[#ee2a7b] to-[#6228d7] hover:scale-[1.03] active:scale-95"
                   }
                 `}
               >
-                <div className={`w-full h-full rounded-full bg-white transition-all p-0`}>
+                <div className="w-full h-full rounded-full bg-white p-[2px]">
                   <div className="w-full h-full rounded-full overflow-hidden bg-gray-100">
                     <img
                       src={
