@@ -722,7 +722,7 @@ export default function MyProfilePage() {
                     const commentAuthor = comment.userName || 'Пользователь';
                     const userAvatar = comment.userImage ? `${IMAGE_BASE_URL}/${comment.userImage}` : undefined
                     return (
-                      <div key={comment.postCommentId} className="flex gap-3 items-start text-[13px] justify-between group">
+                      <div key={cid} className="flex gap-3 items-start text-[13px] justify-between group">
                         <div className="flex gap-3 items-start flex-1">
                           <Avatar src={userAvatar} size="small" className="flex-shrink-0" />
                           <div className="flex-1">

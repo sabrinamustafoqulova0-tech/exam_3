@@ -25,8 +25,7 @@ import {
   useAddFollowingMutation,
   useDeleteFollowingMutation,
 } from "@/app/services/Reels"
-import { useGetMyProfileQuery } from "@/app/services/publication.home"
-
+import NewMessageModal from "@/app/components/NewMessageModal"
 
 const API_IMAGE = "https://instagram-api.softclub.tj/images/"
 
@@ -226,13 +225,7 @@ function ReelCard({
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)
   const [shareCount, setShareCount] = useState(() => Math.floor(Math.random() * 480) + 20)
   const [activeCategory, setActiveCategory] = useState<string>("🔥 Popular")
-  const [isReposted, setIsReposted] = useState(false)
-  const [repostCount, setRepostCount] = useState(() => Math.floor((reel.postLikeCount || 0) * 0.4) + 12)
-  const [showRepostModal, setShowRepostModal] = useState(false)
-  const [repostMessage, setRepostMessage] = useState("")
-  const [tempMessage, setTempMessage] = useState("")
-
-
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false)
 
   // Determine media type (Video or Image) from filename
   const isVideo = reel.images
@@ -346,14 +339,14 @@ function ReelCard({
     if (e) e.stopPropagation()
     const nextLiked = !isLiked
     setIsLiked(nextLiked)
-    setLikeCount((prev) => (nextLiked ? prev + 1 : Math.max(0, prev - 1)))
+    setLikeCount((prev: number) => (nextLiked ? prev + 1 : Math.max(0, prev - 1)))
 
     try {
       await likePost(reel.postId).unwrap()
     } catch (err) {
       // rollback if failed
       setIsLiked(!nextLiked)
-      setLikeCount((prev) => (!nextLiked ? prev + 1 : Math.max(0, prev - 1)))
+      setLikeCount((prev: number) => (!nextLiked ? prev + 1 : Math.max(0, prev - 1)))
       triggerToast("Error updating like")
     }
   }
@@ -446,10 +439,11 @@ function ReelCard({
       userImage: myProfile?.data?.userImage || myProfile?.userImage || null,
       comment: commentText,
       date: new Date().toISOString(),
+      likes: 0,
+      isLiked: false,
     }
 
-
-    setComments((prev) => [{ ...newComment, likes: 0, isLiked: false }, ...prev])
+    setComments((prev) => [newComment, ...prev])
     setNewCommentText("")
 
     try {
@@ -859,8 +853,8 @@ function ReelCard({
           {/* Share */}
           <div className="flex flex-col items-center group">
             <button
-              onClick={handleShare}
-              className="flex h-9 w-9 items-center justify-center transition-all duration-200 hover:scale-110 active:scale-90 cursor-pointer text-black"
+              onClick={() => setIsShareModalOpen(true)}
+              className="flex h-11 w-11 items-center justify-center rounded-full transition duration-200 text-black hover:text-black/80 cursor-pointer active:scale-90"
             >
               <ReelSendIcon />
             </button>
@@ -947,102 +941,17 @@ function ReelCard({
           </div>
         </div>
       </div>
-
-      {/* Repost Dialog (Modal) */}
-      {showRepostModal && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs pointer-events-auto">
-          {/* Modal Card */}
-          <div className="relative w-[90%] max-w-[320px] bg-white rounded-3xl p-6 shadow-2xl flex flex-col items-center text-black animate-scale-up">
-            {/* Close button */}
-            <button
-              onClick={() => setShowRepostModal(false)}
-              className="absolute top-4 left-4 text-gray-400 hover:text-black transition p-1 rounded-full hover:bg-gray-100 cursor-pointer"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-
-            {/* Speech bubble and Avatar group */}
-            <div className="flex flex-col items-center mt-8 mb-6 relative">
-              {/* Speech Bubble Input */}
-              <div className="relative bg-white border border-gray-200 text-black px-4 py-2.5 rounded-2xl shadow-lg mb-4 w-44 max-w-xs flex items-center justify-center">
-                <input
-                  type="text"
-                  placeholder="Добавьте ваше мнение..."
-                  value={tempMessage}
-                  onChange={(e) => setTempMessage(e.target.value)}
-                  className="w-full bg-transparent text-center text-xs font-semibold focus:outline-none placeholder-gray-300 text-black"
-                  autoFocus
-                />
-                {/* Speech bubble arrow */}
-                <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-2.5 h-2.5 bg-white border-r border-b border-gray-200 rotate-45"></div>
-              </div>
-
-              {/* Avatar with purple badge */}
-              <div className="relative">
-                <div className="h-20 w-20 rounded-full border border-gray-100 object-cover bg-gray-200 flex items-center justify-center text-gray-400">
-                  <svg className="h-10 w-10" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
-                  </svg>
-                </div>
-                <div className="absolute bottom-0 right-0 flex h-6 w-6 items-center justify-center rounded-full bg-violet-600 border-2 border-white shadow-lg animate-scale-up">
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="white"
-                    strokeWidth="3.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="h-3.5 w-3.5"
-                  >
-                    <path d="M17 2l4 4-4 4" />
-                    <path d="M3 11V9a3 3 0 0 1 3-3h15" />
-                    <path d="M7 22l-4-4 4-4" />
-                    <path d="M21 13v2a3 3 0 0 1-3 3H3" />
-                  </svg>
-                </div>
-              </div>
-            </div>
-
-            {/* Repost status line */}
-            {isReposted && (
-              <p className="text-xs font-semibold text-gray-400 mb-6 text-center">
-                Вы сделали репост этого контента.{" "}
-                <button
-                  onClick={() => {
-                    setIsReposted(false)
-                    setRepostCount((c) => c - 1)
-                    setRepostMessage("")
-                    setShowRepostModal(false)
-                    triggerToast("Repost removed.")
-                  }}
-                  className="text-blue-500 font-bold hover:underline cursor-pointer ml-1"
-                >
-                  Удалить
-                </button>
-              </p>
-            )}
-
-            {/* Submit button */}
-            <button
-              onClick={() => {
-                if (!isReposted) {
-                  setIsReposted(true)
-                  setRepostCount((c) => c + 1)
-                }
-                setRepostMessage(tempMessage.trim() || "Добавьте ваше мнение...")
-                setShowRepostModal(false)
-                triggerToast("Reposted successfully!")
-              }}
-
-              className="w-full bg-[#b3c7f7] hover:bg-[#9cb6f5] text-white font-bold py-3 px-6 rounded-2xl transition duration-200 cursor-pointer text-center text-xs shadow-xs"
-            >
-              Добавить
-            </button>
-          </div>
-        </div>
-      )}
+      
+      <NewMessageModal
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+        postId={reel.postId}
+        postUrl={`${window.location.origin}/reels/${reel.postId}`}
+        onSent={(msg) => {
+          triggerToast(msg);
+          setShareCount(prev => prev + 1);
+        }}
+      />
     </section>
 
   )

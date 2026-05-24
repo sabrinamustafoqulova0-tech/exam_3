@@ -18,6 +18,11 @@ import {
   useGetStoriesQuery,
   useLikeStoryMutation,
 } from "@/app/services/home.store";
+import {
+  useGetChatsQuery,
+  useCreateChatMutation,
+  useSendMessageMutation,
+} from "@/app/services/chatApi";
 
 const STORY_DURATION = 5000;
 
@@ -49,6 +54,11 @@ const StoriesSection = () => {
   const [likeStory] = useLikeStoryMutation();
   const [addStoryView] = useAddStoryViewMutation();
 
+  const { data: chats = [] } = useGetChatsQuery();
+  const [createChat] = useCreateChatMutation();
+  const [sendMessage] = useSendMessageMutation();
+  const [toast, setToast] = useState<{ show: boolean; message: string }>({ show: false, message: "" });
+
   const [showStories, setShowStories] = useState(false);
   const [viewCounts, setViewCounts] = useState<Record<number, number>>({});
 
@@ -59,6 +69,42 @@ const StoriesSection = () => {
   const [isMuted, setIsMuted] = useState(true);
 
   const [likedStories, setLikedStories] = useState<Record<number, boolean>>({});
+
+  const handleSendReply = async () => {
+    if (!replyText.trim() || !activeUser?.userId) return;
+
+    try {
+      let chatId: number | null = null;
+      const existingChat = chats.find(
+        (c: any) =>
+          String(c.sendUserId) === String(activeUser.userId) ||
+          String(c.receiveUserId) === String(activeUser.userId)
+      );
+
+      if (existingChat) {
+        chatId = existingChat.chatId;
+      } else {
+        const res = await createChat(activeUser.userId.toString()).unwrap();
+        chatId = res;
+      }
+
+      if (chatId) {
+        await sendMessage({
+          ChatId: chatId,
+          MessageText: `Ответил(а) на вашу историю: ${replyText.trim()}`,
+          File: null,
+        }).unwrap();
+        
+        setReplyText("");
+        setToast({ show: true, message: "Ответ отправлен!" });
+        setTimeout(() => {
+          setToast({ show: false, message: "" });
+        }, 2000);
+      }
+    } catch (err) {
+      console.error("Ошибка при отправке ответа на историю:", err);
+    }
+  };
 
   // seenStories — объединяет localStorage + бэкенд (isViewed) + текущая сессия
   const [seenStories, setSeenStories] = useState<Record<number, boolean>>(
@@ -163,14 +209,14 @@ const StoriesSection = () => {
 
   // АВТОПЛЕЙ ТАЙМЕР
   useEffect(() => {
-    if (!showStories) return;
+    if (!showStories || replyText) return;
 
     const timer = setTimeout(() => {
       goNext();
     }, STORY_DURATION);
 
     return () => clearTimeout(timer);
-  }, [showStories, activeStoryIndex, activeUserIndex]);
+  }, [showStories, activeStoryIndex, activeUserIndex, replyText]);
 
   if (isLoading) {
     return (
@@ -242,6 +288,14 @@ const StoriesSection = () => {
       {/* МОДАЛКА ИСТОРИИ */}
       {showStories && activeStory && (
         <div className="fixed inset-0 z-50 bg-[#1a1a1a] flex items-center justify-center select-none p-0 md:p-6 overflow-hidden">
+
+          {/* TOAST FEEDBACK */}
+          {toast.show && (
+            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-[60] bg-black/85 backdrop-blur-md text-white px-6 py-3 rounded-2xl flex items-center gap-2 border border-white/10 shadow-2xl transition-all duration-300 pointer-events-none">
+              <span className="text-emerald-400 font-bold">✓</span>
+              <span className="text-sm font-medium">{toast.message}</span>
+            </div>
+          )}
 
           {/* ЗАДНИЙ ФОН С РАЗМЫТИЕМ */}
           <div className="absolute inset-0 z-0 hidden md:block opacity-50 blur-3xl scale-110 pointer-events-none">
@@ -360,11 +414,19 @@ const StoriesSection = () => {
                     <input
                       value={replyText}
                       onChange={(e) => setReplyText(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          handleSendReply();
+                        }
+                      }}
                       placeholder={`Reply to ${activeUser.userName}...`}
                       className="w-full bg-transparent border border-white/40 rounded-full pl-5 pr-12 py-2 text-[14px] text-white placeholder-white/60 outline-none focus:border-white transition-colors"
                     />
                     {replyText && (
-                      <button className="absolute right-4 text-white font-semibold text-[14px] hover:text-sky-400">
+                      <button
+                        onClick={handleSendReply}
+                        className="absolute right-4 text-white font-semibold text-[14px] hover:text-sky-400"
+                      >
                         Send
                       </button>
                     )}
@@ -392,7 +454,10 @@ const StoriesSection = () => {
                       )}
                     </button>
 
-                    <button className="hover:scale-105 active:scale-95 transition-transform focus:outline-none rotate-[-20deg] mb-0.5">
+                    <button
+                      onClick={handleSendReply}
+                      className="hover:scale-105 active:scale-95 transition-transform focus:outline-none rotate-[-20deg] mb-0.5"
+                    >
                       <SendIcon fontSize="medium" />
                     </button>
                   </div>

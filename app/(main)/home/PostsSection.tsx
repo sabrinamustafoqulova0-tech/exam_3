@@ -12,13 +12,14 @@ import VolumeOffIcon from "@mui/icons-material/VolumeOff";
 import VolumeUpIcon from "@mui/icons-material/VolumeUp";
 import RepeatIcon from "@mui/icons-material/Repeat";
 import AutorenewIcon from "@mui/icons-material/Autorenew";
+import NewMessageModal from "@/app/components/NewMessageModal";
 
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Pagination } from "swiper/modules";
 import "swiper/css";
 import "swiper/css/pagination";
 
-import { Api, GetUserId } from "@/app/utils/token";
+import { Api, GetUserId, MyAxios } from "@/app/utils/token";
 
 import {
   useAddCommentMutation,
@@ -378,6 +379,50 @@ const CommentsModal = ({ post, onClose, getCurrentIndex, setPostIndex, toggleMut
           </div>
         </div>
       </div>
+
+      {/* Delete Comment Confirmation Bottom Sheet / Modal */}
+      {deleteCommentId !== null && (
+        <div 
+          className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4 backdrop-blur-xs"
+          onClick={() => setDeleteCommentId(null)}
+        >
+          <div 
+            className="bg-white w-full max-w-[320px] rounded-2xl overflow-hidden shadow-2xl border border-gray-100/50"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex flex-col">
+              <button
+                onClick={async () => {
+                  if (deleteCommentId !== null) {
+                    try {
+                      // Call DELETE API
+                      await MyAxios.delete(`/Post/delete-comment?commentId=${deleteCommentId}`);
+                      // Remove from local list
+                      setComments(prev => prev.filter((item, idx) => {
+                        const id = item.commentId || idx;
+                        return id !== deleteCommentId;
+                      }));
+                    } catch (err) {
+                      console.error("Failed to delete comment:", err);
+                    } finally {
+                      setDeleteCommentId(null);
+                    }
+                  }
+                }}
+                className="w-full py-4 text-sm font-bold text-red-500 hover:bg-red-50 active:bg-red-100 transition text-center border-b border-gray-100 cursor-pointer"
+              >
+                Удалить
+              </button>
+              <button
+                onClick={() => setDeleteCommentId(null)}
+                className="w-full py-4 text-sm font-normal text-black hover:bg-gray-50 active:bg-gray-100 transition text-center cursor-pointer"
+              >
+                Отмена
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -675,6 +720,26 @@ const PostsSection = () => {
       {/* ABOUT ACCOUNT MODAL */}
       {aboutPost && (
         <AboutAccountModal post={aboutPost} onClose={() => setAboutPost(null)} />
+      )}
+
+      {/* SHARE MODAL */}
+      <NewMessageModal
+        isOpen={sharePostId !== null}
+        onClose={() => setSharePostId(null)}
+        postId={sharePostId || undefined}
+        postUrl={sharePostId ? `${window.location.origin}/post/${sharePostId}` : undefined}
+        onSent={(msg) => {
+          setToast({ show: true, message: msg });
+          setTimeout(() => setToast({ show: false, message: "" }), 2000);
+        }}
+      />
+
+      {/* TOAST NOTIFICATION */}
+      {toast.show && (
+        <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 bg-black/85 backdrop-blur-md text-white px-6 py-3 rounded-2xl flex items-center gap-2 border border-white/10 shadow-2xl transition-all duration-300 pointer-events-none">
+          <span className="text-emerald-400 font-bold">✓</span>
+          <span className="text-sm font-medium">{toast.message}</span>
+        </div>
       )}
     </>
   );

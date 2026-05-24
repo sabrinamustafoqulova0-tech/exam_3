@@ -19,6 +19,7 @@ import { GetToken } from "@/app/utils/token";
 import {
   useGetUserProfileByIdQuery,
   useGetMyProfileQuery,
+  useGetPostByIdQuery,
 } from "@/app/services/postApi";
 import EmojiGame from "@/app/components/EmojiGame";
 import CallOverlay from "@/app/components/CallOverlay";
@@ -81,6 +82,181 @@ const isSingleEmoji = (text: string | null | undefined) => {
   if (chars.length !== 1) return false;
   const charCode = t.codePointAt(0);
   return charCode ? charCode > 0x2500 && !/^[a-zA-Z0-9\s.,!?]$/.test(t) : false;
+};
+
+const getReelIdFromText = (text: string | null | undefined) => {
+  if (!text) return null;
+  const match = text.match(/\/reels\/(\d+)/i);
+  return match ? Number(match[1]) : null;
+};
+
+const getVideoUrl = (post: any) => {
+  if (!post) return "";
+  let file: string | null = null;
+  
+  if (typeof post.images === "string" && post.images) {
+    file = post.images;
+  } else if (Array.isArray(post.images) && post.images.length > 0) {
+    file = post.images[0];
+  } else if (post.file) {
+    file = post.file;
+  } else if (post.postImages) {
+    file = post.postImages;
+  } else if (post.imagePath) {
+    file = post.imagePath;
+  } else if (post.image) {
+    file = post.image;
+  }
+  
+  if (!file) return "";
+  
+  if (file.startsWith("http://") || file.startsWith("https://")) {
+    return file;
+  }
+  return `https://instagram-api.softclub.tj/images/${file}`;
+};
+
+const ReelMessagePreview = ({ reelId, isOwn }: { reelId: number; isOwn: boolean }) => {
+  const { data: post, isLoading, isError } = useGetPostByIdQuery(reelId);
+  const router = useRouter();
+
+  if (isLoading) {
+    return (
+      <div style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        width: 240,
+        height: 360,
+        background: isOwn ? "rgba(255, 255, 255, 0.15)" : "#efefef",
+        borderRadius: 16,
+        color: isOwn ? "#fff" : "#262626",
+        fontSize: 12,
+        gap: 8
+      }}>
+        <div style={{
+          width: 18,
+          height: 18,
+          border: "2px solid currentColor",
+          borderTopColor: "transparent",
+          borderRadius: "50%",
+          animation: "spin 1s linear infinite"
+        }} />
+        <span>Загрузка видео...</span>
+        <style>{`
+          @keyframes spin {
+            to { transform: rotate(360deg); }
+          }
+        `}</style>
+      </div>
+    );
+  }
+
+  if (isError || !post) {
+    return (
+      <div style={{
+        padding: "12px 16px",
+        background: isOwn ? "rgba(255, 255, 255, 0.2)" : "#f3f4f6",
+        borderRadius: 16,
+        color: isOwn ? "#fff" : "#262626",
+        fontSize: 13,
+      }}>
+        <span>Видео недоступно</span>
+      </div>
+    );
+  }
+
+  const videoUrl = getVideoUrl(post);
+  const userAvatar = post.userImage 
+    ? (post.userImage.startsWith("http") ? post.userImage : `https://instagram-api.softclub.tj/images/${post.userImage}`)
+    : `https://ui-avatars.com/api/?name=${post.userName || "U"}&background=dbdbdb&color=333`;
+
+  return (
+    <div 
+      onClick={() => router.push(`/reels`)}
+      style={{
+        width: 240,
+        height: 360,
+        borderRadius: 16,
+        overflow: "hidden",
+        background: "#000",
+        boxShadow: "0 4px 15px rgba(0,0,0,0.15)",
+        cursor: "pointer",
+        display: "flex",
+        flexDirection: "column",
+        position: "relative",
+      }}
+    >
+      {/* Reel Header */}
+      <div style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 8,
+        padding: "10px 12px",
+        background: "linear-gradient(to bottom, rgba(0,0,0,0.7), transparent)",
+        position: "absolute",
+        top: 0,
+        left: 0,
+        right: 0,
+        zIndex: 5,
+      }}>
+        <img 
+          src={userAvatar} 
+          alt={post.userName} 
+          style={{ width: 26, height: 26, borderRadius: "50%", border: "1px solid rgba(255,255,255,0.4)", objectFit: "cover" }}
+        />
+        <span style={{ color: "#fff", fontSize: 13, fontWeight: 600, textShadow: "0 1px 3px rgba(0,0,0,0.5)" }}>
+          {post.userName || "user"}
+        </span>
+      </div>
+
+      {/* Video Content */}
+      <div style={{ width: "100%", height: "100%", background: "#111" }}>
+        {videoUrl ? (
+          <video
+            src={videoUrl}
+            style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+            controls
+            autoPlay
+            muted
+            loop
+            playsInline
+          />
+        ) : (
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "#999" }}>
+            <span>Нет видео</span>
+          </div>
+        )}
+      </div>
+
+      {/* Caption/Content overlay at the bottom */}
+      {post.content && (
+        <div style={{
+          padding: "12px 12px 10px 12px",
+          background: "linear-gradient(to top, rgba(0,0,0,0.8), transparent)",
+          position: "absolute",
+          bottom: 0,
+          left: 0,
+          right: 0,
+          zIndex: 5,
+        }}>
+          <p style={{
+            margin: 0,
+            fontSize: 12,
+            color: "#fff",
+            textShadow: "0 1px 3px rgba(0,0,0,0.5)",
+            display: "-webkit-box",
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: "vertical",
+            overflow: "hidden",
+            lineHeight: "1.4"
+          }}>
+            {post.content}
+          </p>
+        </div>
+      )}
+    </div>
+  );
 };
 
 const renderNoteBubbleContent = (text: string | null, music?: { title: string; artist: string } | null) => {
@@ -3606,8 +3782,8 @@ export default function MessagesPage() {
                             ...styles.messageBubble,
                             ...(isOwn ? styles.ownBubble : styles.otherBubble),
                             ...(actualText && isSingleEmoji(actualText) ? { background: "transparent", boxShadow: "none", color: "initial" } : {}),
-                            ...((msg.file && !isVoiceMsg) || (actualText && isGifUrl(actualText)) ? { background: "transparent", boxShadow: "none", padding: 0 } : {}),
-                            padding: replyText ? "6px 6px 10px 6px" : (actualText && isSingleEmoji(actualText) ? "0" : (((msg.file && !isVoiceMsg) || (actualText && isGifUrl(actualText))) ? 0 : "10px 14px")),
+                            ...((msg.file && !isVoiceMsg) || (actualText && isGifUrl(actualText)) || (actualText && getReelIdFromText(actualText)) ? { background: "transparent", boxShadow: "none", padding: 0 } : {}),
+                            padding: replyText ? "6px 6px 10px 6px" : (actualText && isSingleEmoji(actualText) ? "0" : (((msg.file && !isVoiceMsg) || (actualText && isGifUrl(actualText)) || (actualText && getReelIdFromText(actualText))) ? 0 : "10px 14px")),
                             display: "flex",
                             flexDirection: "column",
                             gap: 6,
@@ -3857,7 +4033,9 @@ export default function MessagesPage() {
                             );
                           })()
                         ) : actualText ? (
-                          actualText && isSingleEmoji(actualText) ? (
+                          getReelIdFromText(actualText) ? (
+                            <ReelMessagePreview reelId={getReelIdFromText(actualText)!} isOwn={isOwn} />
+                          ) : actualText && isSingleEmoji(actualText) ? (
                             <p 
                               style={{ ...styles.messageText, fontSize: 64, lineHeight: 1, userSelect: "none", cursor: "pointer", transition: "transform 0.1s" }} 
                               onDoubleClick={() => setPlayEmoji(actualText)}
@@ -3873,12 +4051,12 @@ export default function MessagesPage() {
                           )
                         ) : null}
                         <div style={styles.messageFooter}>
-                          <span style={isMusicMsg ? { ...styles.messageTime, color: "#999" } : (actualText && isSingleEmoji(actualText) ? { ...styles.messageTime, color: "#8e8e8e" } : styles.messageTime)}>
+                          <span style={isMusicMsg ? { ...styles.messageTime, color: "#999" } : ((actualText && isSingleEmoji(actualText)) || (actualText && getReelIdFromText(actualText)) ? { ...styles.messageTime, color: "#8e8e8e" } : styles.messageTime)}>
                             {formatTime(msg.sendMassageDate)}
                           </span>
                           {isOwn && (
                             <span style={{ marginLeft: 4, display: "flex", alignItems: "center" }} title={msg.messageId <= latestOtherMsgId ? "Прочитано" : "Отправлено"}>
-                              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={msg.messageId <= latestOtherMsgId ? "#34b7f1" : (actualText && isSingleEmoji(actualText) ? "#8e8e8e" : "rgba(255,255,255,0.6)")} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={msg.messageId <= latestOtherMsgId ? "#34b7f1" : ((actualText && isSingleEmoji(actualText)) || (actualText && getReelIdFromText(actualText)) ? "#8e8e8e" : "rgba(255,255,255,0.6)")} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                                 <path d="M18 6 7 17l-5-5"/>
                                 <path d="m22 10-7.5 7.5L13 16"/>
                               </svg>
