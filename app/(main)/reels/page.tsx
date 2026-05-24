@@ -175,7 +175,7 @@ export default function ReelsPage() {
   }
 
   return (
-    <div className="h-full w-full overflow-y-scroll bg-white text-black snap-y snap-mandatory scrollbar-none flex flex-col items-center">
+    <div className="h-screen w-full overflow-y-scroll bg-white text-black snap-y snap-mandatory scrollbar-none flex flex-col items-center scroll-smooth">
       {data.map((reel) => (
         <ReelCard
           key={reel.postId}
@@ -464,7 +464,7 @@ function ReelCard({
   }
 
   return (
-    <section className="flex h-screen w-full snap-start items-center justify-center bg-white py-2 relative select-none text-black">
+    <section className="flex h-screen w-full snap-start snap-always items-center justify-center bg-white relative select-none text-black flex-shrink-0">
 
       {/* ── Instagram-style RIGHT SIDE comments drawer ── */}
       {showComments && (

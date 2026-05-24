@@ -157,7 +157,8 @@ export default function Sidebar() {
       {/* ===== LEFT SIDEBAR ===== */}
       <div
         className={`
-          flex flex-col justify-between p-3 border-r border-[#e4e4e7] bg-white transition-all duration-300 z-30 relative
+          sticky top-0 h-screen
+          flex flex-col justify-between p-3 border-r border-[#e4e4e7] bg-white transition-all duration-300 z-30
           ${isLocked 
             ? "w-[73px]" 
             : "w-[73px] hover:w-[245px] group shadow-[0_0_10px_rgba(0,0,0,0.01)] hover:shadow-[4px_0_24px_rgba(0,0,0,0.04)]"
