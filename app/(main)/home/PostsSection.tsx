@@ -450,6 +450,8 @@ const PostsSection = () => {
   const [fakeReposts, setFakeReposts] = useState<Record<number, number>>({});
   const [repostTexts, setRepostTexts] = useState<Record<number, string>>({});
   const [repostModalTargetId, setRepostModalTargetId] = useState<number | null>(null);
+  const [sharePostId, setSharePostId] = useState<number | null>(null);
+  const [toast, setToast] = useState<{ show: boolean; message: string }>({ show: false, message: "" });
 
   const [likePost] = useLikePostMutation();
   const [favoritePost] = useFavoritePostMutation();
