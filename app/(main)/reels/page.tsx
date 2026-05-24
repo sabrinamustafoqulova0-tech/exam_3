@@ -25,6 +25,7 @@ import {
   useAddFollowingMutation,
   useDeleteFollowingMutation,
 } from "@/app/services/Reels"
+import { useGetMyProfileQuery } from "@/app/services/Profile"
 import NewMessageModal from "@/app/components/NewMessageModal"
 import { useGetMyProfileQuery } from "@/app/services/Profile"
 
@@ -227,6 +228,11 @@ function ReelCard({
   const [shareCount, setShareCount] = useState(() => Math.floor(Math.random() * 480) + 20)
   const [activeCategory, setActiveCategory] = useState<string>("🔥 Popular")
   const [isShareModalOpen, setIsShareModalOpen] = useState(false)
+  const [isReposted, setIsReposted] = useState(false)
+  const [repostMessage, setRepostMessage] = useState("Добавьте ваше мнение...")
+  const [tempMessage, setTempMessage] = useState("")
+  const [showRepostModal, setShowRepostModal] = useState(false)
+  const [repostCount, setRepostCount] = useState(reel.repostCount || 0)
 
   // Determine media type (Video or Image) from filename
   const isVideo = reel.images
