@@ -5166,6 +5166,7 @@ const styles: Record<string, React.CSSProperties> = {
     height: "100vh",
     background: "#fafafa",
     fontFamily: "'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif",
+    paddingLeft: "73px",
   },
 
   // Sidebar

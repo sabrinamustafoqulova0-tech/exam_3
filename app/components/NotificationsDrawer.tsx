@@ -210,7 +210,7 @@ export default function NotificationsDrawer({ isOpen, onClose }: NotificationsDr
       />
 
       {/* FIXED INSTAGRAM DRAWER */}
-      <div className="fixed left-0 md:left-[80px] md:group-hover:left-[250px] top-0 h-screen w-full md:w-[420px] bg-white border-r border-gray-200 z-50 flex flex-col shadow-[4px_0_24px_rgba(0,0,0,0.06)] animate-slideIn transition-all duration-300 cursor-default">
+      <div className="notifications-drawer fixed left-0 md:left-[80px] md:group-hover:left-[250px] top-0 h-screen w-full md:w-[420px] bg-white border-r border-gray-200 z-50 flex flex-col shadow-[4px_0_24px_rgba(0,0,0,0.06)] animate-slideIn transition-all duration-300 cursor-default">
         
         {/* CSS Animation injection */}
         <style dangerouslySetInnerHTML={{__html: `

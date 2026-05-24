@@ -59,37 +59,37 @@ export default function NotificationsPage() {
         type: "like",
         userName: "alijonakt",
         userImage: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80",
-        text: 'поставил(а) "Нравится" вашей истории.',
+        text: "liked your story.",
       },
       {
         type: "comment",
         userName: "tvgirlbutnotyours",
         userImage: "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=150&q=80",
-        text: 'прокомментировал(а): "@somon_z это невероятно, абсолютный шедевр! 👏🔥"',
+        text: 'commented: "@somon_z this is incredible, absolute masterpiece! 👏🔥"',
       },
       {
         type: "follow",
         userName: "kamolov__j",
         userImage: "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=150&q=80",
-        text: "подписался(-ась) на ваши обновления.",
+        text: "started following you.",
       },
       {
         type: "mention",
         userName: "xo1ikzoda.1",
         userImage: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80",
-        text: "упомянул(а) вас в публикации.",
+        text: "mentioned you in a post.",
       },
       {
         type: "like",
         userName: "dilwod.mma",
         userImage: "https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?auto=format&fit=crop&w=150&q=80",
-        text: 'поставил(а) "Нравится" вашему Reels.',
+        text: "liked your Reels.",
       },
       {
         type: "comment",
         userName: "kn1ghtwillbefine",
         userImage: "https://images.unsplash.com/photo-1488426862026-3ee34a7d66df?auto=format&fit=crop&w=150&q=80",
-        text: 'прокомментировал(а): "Давай сделаем коллаборацию! 🚀"',
+        text: 'commented: "Let\'s collaborate soon! 🚀"',
       },
     ]
 
@@ -123,17 +123,17 @@ export default function NotificationsPage() {
     const diffMs = now.getTime() - date.getTime()
 
     const diffMins = Math.floor(diffMs / 60000)
-    if (diffMins < 1) return "1 мин."
-    if (diffMins < 60) return `${diffMins} мин.`
+    if (diffMins < 1) return "1 min"
+    if (diffMins < 60) return `${diffMins} min`
 
     const diffHours = Math.floor(diffMins / 60)
-    if (diffHours < 24) return `${diffHours} ч.`
+    if (diffHours < 24) return `${diffHours}h`
 
     const diffDays = Math.floor(diffHours / 24)
-    if (diffDays < 7) return `${diffDays} д.`
+    if (diffDays < 7) return `${diffDays}d`
 
     const diffWeeks = Math.floor(diffDays / 7)
-    return `${diffWeeks} нед.`
+    return `${diffWeeks}w`
   }
 
   // Filter notifications based on tab
@@ -181,13 +181,13 @@ export default function NotificationsPage() {
   const getGroupTitle = (title: string) => {
     switch (title) {
       case "Today":
-        return "Сегодня"
+        return "Today"
       case "Yesterday":
-        return "Вчера"
+        return "Yesterday"
       case "This week":
-        return "На этой неделе"
+        return "This week"
       case "Earlier":
-        return "Ранее"
+        return "Earlier"
       default:
         return title
     }
@@ -212,13 +212,13 @@ export default function NotificationsPage() {
       </div>
 
       {/* FIXED INSTAGRAM DRAWER */}
-      <div className="fixed left-0 md:left-[80px] top-0 h-screen w-full md:w-[420px] bg-white border-r border-gray-200 z-40 flex flex-col shadow-[4px_0_24px_rgba(0,0,0,0.04)] animate-slideIn transition-all duration-300">
+      <div className="notifications-drawer fixed left-0 md:left-[80px] top-0 h-screen w-full md:w-[420px] bg-white border-r border-gray-200 z-40 flex flex-col shadow-[4px_0_24px_rgba(0,0,0,0.04)] animate-slideIn transition-all duration-300">
         
         {/* Header Section */}
         <div className="px-6 pt-8 pb-4 flex justify-between items-center sticky top-0 bg-white z-30">
           <div className="flex items-center gap-3">
             <h1 className="text-[28px] font-bold text-black tracking-tight">
-              Уведомления
+              Notifications
             </h1>
             {unreadCount > 0 && (
               <span className="h-2 w-2 rounded-full bg-[#0095f6]"></span>
@@ -246,7 +246,7 @@ export default function NotificationsPage() {
                 : "border-gray-200 text-gray-700 hover:bg-gray-50 hover:text-black"
             }`}
           >
-            Все
+            All
           </button>
           <button
             onClick={() => setActiveTab("following")}
@@ -256,7 +256,7 @@ export default function NotificationsPage() {
                 : "border-gray-200 text-gray-700 hover:bg-gray-50 hover:text-black"
             }`}
           >
-            Люди, на которых вы подписаны
+            People you follow
           </button>
           <button
             onClick={() => setActiveTab("comments")}
@@ -266,7 +266,7 @@ export default function NotificationsPage() {
                 : "border-gray-200 text-gray-700 hover:bg-gray-50 hover:text-black"
             }`}
           >
-            Комментарии
+            Comments
           </button>
         </div>
 
@@ -321,7 +321,7 @@ export default function NotificationsPage() {
               </div>
               <div className="flex-1 text-[13px] leading-snug text-gray-700">
                 <span className="text-gray-900 font-normal">
-                  Всего один шаг до получения статуса Meta Verified: подтвердите свою личность, иначе ваша подписка мо... <span className="text-gray-500 font-semibold hover:underline">ещё 19 ч.</span>
+                  Only one step left to get Meta Verified: confirm your identity, otherwise your subscription will... <span className="text-gray-500 font-semibold hover:underline">more 19h</span>
                 </span>
               </div>
             </div>
@@ -332,9 +332,9 @@ export default function NotificationsPage() {
               <div className="relative mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-gray-50 border border-gray-100 text-gray-600">
                 <BellIcon className="h-8 w-8 text-black" />
               </div>
-              <h3 className="text-base font-bold text-black mb-1">Нет уведомлений</h3>
+              <h3 className="text-base font-bold text-black mb-1">No notifications</h3>
               <p className="text-xs text-gray-500 max-w-[280px]">
-                Здесь будут показываться действия вашего профиля. Используйте панель симуляции для добавления уведомлений.
+                Activities on your profile will appear here. Toggle developer controls to simulate updates.
               </p>
             </div>
           ) : (
@@ -410,7 +410,7 @@ export default function NotificationsPage() {
                                   : "bg-[#0095f6] hover:bg-[#1aa3ff] text-white"
                               }`}
                             >
-                              {isUserFollowed ? "Подписки" : "Подписаться в ответ"}
+                              {isUserFollowed ? "Following" : "Follow back"}
                             </button>
                           ) : (
                             <div className="relative h-12 w-12 rounded-lg overflow-hidden border border-gray-200 hover:opacity-85 transition cursor-pointer select-none">

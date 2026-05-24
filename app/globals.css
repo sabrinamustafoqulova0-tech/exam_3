@@ -59,3 +59,8 @@ body {
 .animate-spin-custom {
   animation: spin 1s linear infinite;
 }
+
+/* When navbar is hovered, push the notifications drawer to the right */
+.main-navbar:hover ~ .flex-1 .notifications-drawer {
+  left: 245px !important;
+}

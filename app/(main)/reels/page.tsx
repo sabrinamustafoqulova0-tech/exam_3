@@ -27,7 +27,7 @@ import {
 } from "@/app/services/Reels"
 import { useGetMyProfileQuery } from "@/app/services/Profile"
 import NewMessageModal from "@/app/components/NewMessageModal"
-import { useGetMyProfileQuery } from "@/app/services/Profile"
+
 
 const API_IMAGE = "https://instagram-api.softclub.tj/images/"
 
