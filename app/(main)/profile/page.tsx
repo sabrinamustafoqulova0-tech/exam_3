@@ -15,13 +15,50 @@ import {
   useGetSubscribersQuery,
   useGetSubscriptionsQuery,
   useAddFollowingRelationShipMutation,
-  useDeleteFollowingRelationShipMutation
+  useDeleteFollowingRelationShipMutation,
+  useGetMyStoriesQuery,
+  useLikeStoryMutation,
+  useAddStoryViewMutation,
+  useAddStoriesMutation,
+  useDeleteStoryMutation
 } from '../../services/Profile' // Убедись, что путь к файлу profile.ts указан правильно
 import { Grid, Heart, MessageCircle, Bookmark, Share2, X, Trash2, User, Settings, Plus, Camera } from 'lucide-react'
-import { useState, useRef, ChangeEvent } from 'react'
+import { useState, useRef, ChangeEvent, useEffect, useMemo } from 'react'
+import CloseIcon from '@mui/icons-material/Close'
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
+import ChevronRightIcon from '@mui/icons-material/ChevronRight'
+import VolumeUpIcon from '@mui/icons-material/VolumeUp'
+import VolumeOffIcon from '@mui/icons-material/VolumeOff'
+import RemoveRedEyeIcon from '@mui/icons-material/RemoveRedEye'
+import SendIcon from '@mui/icons-material/Send'
+import FavoriteIcon from '@mui/icons-material/Favorite'
+import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorder'
 import { Skeleton, message, Modal, Input, Avatar, Select } from 'antd'
 
 const IMAGE_BASE_URL = process.env.NEXT_PUBLIC_IMAGES || 'https://instagram-api.softclub.tj/images'
+
+const STORY_DURATION = 5000;
+const SEEN_STORAGE_KEY = "seen_my_story_ids";
+
+const getPersistedSeenStories = (): Record<number, boolean> => {
+  try {
+    if (typeof window === 'undefined') return {};
+    const raw = localStorage.getItem(SEEN_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+};
+
+const persistSeenStory = (storyId: number) => {
+  try {
+    const current = getPersistedSeenStories();
+    current[storyId] = true;
+    localStorage.setItem(SEEN_STORAGE_KEY, JSON.stringify(current));
+  } catch {
+    // ignore
+  }
+};
 
 export default function MyProfilePage() {
   const [messageApi, contextHolder] = message.useMessage()
@@ -39,8 +76,24 @@ export default function MyProfilePage() {
   const [bioText, setBioText] = useState('')
   const [genderValue, setGenderValue] = useState<number>(0)
   
+  const [isNoteModalOpen, setIsNoteModalOpen] = useState(false)
+  const [noteText, setNoteText] = useState('')
+  const [savedNote, setSavedNote] = useState('')
+  
   const [commentText, setCommentText] = useState('')
   const [likedPostIds, setLikedPostIds] = useState<Record<number, boolean>>({})
+
+  // --- Stories UI state & handlers ---
+  const [storiesModalOpen, setStoriesModalOpen] = useState(false)
+  const [activeStoryIndex, setActiveStoryIndex] = useState(0)
+  const storyFileInputRef = useRef<HTMLInputElement>(null)
+  const [isMuted, setIsMuted] = useState(true)
+  const [viewCounts, setViewCounts] = useState<Record<number, number>>({})
+  const [seenStories, setSeenStories] = useState<Record<number, boolean>>(() => getPersistedSeenStories())
+
+  useEffect(() => {
+    setSeenStories(getPersistedSeenStories());
+  }, []);
 
   // --- RTK Query: Получение данных ---
   const { data: profile, isLoading: isProfileLoading } = useGetMyProfileQuery(undefined)
@@ -49,6 +102,8 @@ export default function MyProfilePage() {
   const { data: subscribersData } = useGetSubscribersQuery('')
   const { data: subscriptionsData } = useGetSubscriptionsQuery('')
   const { data: postDetails, refetch: refetchPostDetails } = useGetPostByIdQuery(selectedPostId || 0, { skip: !selectedPostId })
+  // --- RTK Query: Stories ---
+  const { data: myStoriesData, isLoading: isStoriesLoading } = useGetMyStoriesQuery(undefined)
   
   // --- RTK Query: Мутации профиля ---
   const [updateProfileText, { isLoading: isSavingProfile }] = useUpdateUserProfileMutation()
@@ -62,6 +117,57 @@ export default function MyProfilePage() {
   const [addComment] = useAddCommentMutation()
   const [deleteComment] = useDeleteCommentMutation()
   const [addToFavorite] = useAddPostFavoriteMutation()
+  // Stories mutations
+  const [likeStory] = useLikeStoryMutation()
+  const [addStoryView] = useAddStoryViewMutation()
+  const [addStories] = useAddStoriesMutation()
+  const [deleteStory] = useDeleteStoryMutation()
+
+  // --- Stories logic & effect (Moved up to follow Rules of Hooks) ---
+  const myStoriesList = Array.isArray(myStoriesData)
+    ? myStoriesData
+    : Array.isArray(myStoriesData?.data)
+    ? myStoriesData.data
+    : []
+
+  const markStoryAsSeen = (storyId: number) => {
+    setSeenStories((prev) => {
+      if (prev[storyId]) return prev;
+      const updated = { ...prev, [storyId]: true };
+      return updated;
+    });
+    persistSeenStory(storyId);
+  };
+
+  const goNextStory = () => {
+    if (activeStoryIndex < myStoriesList.length - 1) {
+      setActiveStoryIndex((prev) => prev + 1);
+    } else {
+      setStoriesModalOpen(false);
+    }
+  };
+
+  const goPrevStory = () => {
+    if (activeStoryIndex > 0) {
+      setActiveStoryIndex((prev) => prev - 1);
+    }
+  };
+
+  useEffect(() => {
+    if (!storiesModalOpen || !myStoriesList[activeStoryIndex]) return;
+    const currentId = myStoriesList[activeStoryIndex].id || myStoriesList[activeStoryIndex].storyId;
+    if (currentId) {
+      markStoryAsSeen(currentId);
+      addStoryView(currentId).unwrap().then(() => {
+        setViewCounts(prev => ({
+          ...prev,
+          [currentId]: (prev[currentId] ?? myStoriesList[activeStoryIndex].viewCount ?? 0) + 1
+        }));
+      }).catch(() => {});
+    }
+    const timer = setTimeout(() => { goNextStory(); }, STORY_DURATION);
+    return () => clearTimeout(timer);
+  }, [storiesModalOpen, activeStoryIndex, myStoriesList.length]);
 
   // Скелетон загрузки
   if (isProfileLoading || isPostsLoading || isFavoritesLoading) {
@@ -163,6 +269,21 @@ export default function MyProfilePage() {
     }
   }
 
+  const openNoteModal = () => {
+    setNoteText(savedNote || '')
+    setIsNoteModalOpen(true)
+  }
+
+  const handleSaveNote = () => {
+    if (!noteText.trim()) {
+      messageApi.error('Введите текст заметки')
+      return
+    }
+    setSavedNote(noteText.trim())
+    setIsNoteModalOpen(false)
+    messageApi.success('Заметка сохранена')
+  }
+
   const openPostModal = (postId: number) => {
     setSelectedPostId(postId)
     setIsPostDetailsModalOpen(true)
@@ -213,6 +334,38 @@ export default function MyProfilePage() {
   const currentPost = postDetails?.data || postDetails
   const modalMediaUrl = currentPost?.images?.[0] ? (currentPost.images[0].startsWith('http') ? currentPost.images[0] : `${IMAGE_BASE_URL}/${currentPost.images[0]}`) : ''
 
+  const isVideoFile = (path?: string | null) => {
+    return !!path && /\.(mp4|webm|ogg|mov|mkv|m4v)$/i.test(path.split('?')[0])
+  }
+
+  const currentStory = myStoriesList?.[activeStoryIndex]
+  const currentStoryMediaPath = currentStory?.image || currentStory?.file || currentStory?.media || currentStory?.storyMedia || currentStory?.storyFile
+  const currentStoryMediaUrl = currentStoryMediaPath ? (currentStoryMediaPath.startsWith('http') ? currentStoryMediaPath : `${IMAGE_BASE_URL}/${currentStoryMediaPath}`) : ''
+  
+  const currentStoryViews = currentStory 
+    ? (viewCounts[currentStory.id || currentStory.storyId] ?? currentStory.viewCount ?? 0) 
+    : 0;
+
+  const openStories = (index: number) => {
+    setActiveStoryIndex(index)
+    setStoriesModalOpen(true)
+  }
+
+  const handleStoryFilesChange = async (e: ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (!files || files.length === 0) return
+    const form = new FormData()
+    Array.from(files).forEach((f) => form.append('files', f))
+    try {
+      await addStories(form).unwrap()
+      messageApi.success('Сторис добавлен')
+    } catch (err) {
+      messageApi.error('Ошибка загрузки')
+    } finally {
+      if (storyFileInputRef.current) storyFileInputRef.current.value = ''
+    }
+  }
+
   return (
     <div className="min-h-screen bg-white w-full md:pl-[244px] font-sans antialiased text-[#262626]">
       {contextHolder}
@@ -229,7 +382,13 @@ export default function MyProfilePage() {
 
         {/* ШАПКА ПРОФИЛЯ */}
         <header className="flex flex-row items-start gap-10 md:gap-20 pb-11 border-b border-[#efefef] mb-0">
-          <div className="flex-shrink-0 md:w-[290px] flex justify-center">
+          <div className="flex-shrink-0 md:w-[290px] flex justify-center relative">
+            <div className="absolute -top-14 left-1/2 -translate-x-1/2 z-10">
+              <button onClick={openNoteModal} className="flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-[#dbdbdb] shadow-sm text-[13px] font-semibold text-[#262626] hover:bg-[#f7f7f7]">
+                <MessageCircle className="w-4 h-4" />
+                {savedNote ? (savedNote.length > 22 ? `${savedNote.slice(0, 22)}...` : savedNote) : 'Новая заметка'}
+              </button>
+            </div>
             <div 
               onClick={handleAvatarClick}
               className={`relative w-[150px] h-[150px] rounded-full overflow-hidden border border-[#dbdbdb] bg-[#fafafa] cursor-pointer group transition-all ${isUploadingImage ? 'opacity-50 pointer-events-none' : ''}`}
@@ -273,6 +432,34 @@ export default function MyProfilePage() {
           </div>
         </header>
 
+        {/* СТОРИС ЛЕНТА */}
+        <div className="mt-6 mb-2">
+          <div className="flex items-center gap-4 overflow-x-auto py-2 px-1">
+            <div className="flex flex-col items-center flex-shrink-0">
+              <button onClick={() => storyFileInputRef.current?.click()} className="w-16 h-16 rounded-full bg-white border border-[#dbdbdb] flex items-center justify-center hover:scale-105 transition-transform">
+                <Plus size={18} />
+              </button>
+              <input ref={storyFileInputRef} type="file" accept="image/*,video/*" multiple onChange={handleStoryFilesChange} className="hidden" />
+            </div>
+
+            {myStoriesList && myStoriesList.length > 0 ? myStoriesList.map((s: any, idx: number) => {
+              const isSeen = seenStories[s.id || s.storyId];
+              return (
+                <button 
+                  key={s.id || s.storyId || idx} 
+                  onClick={() => openStories(idx)} 
+                  className={`w-16 h-16 rounded-full p-[2px] flex-shrink-0 transition-all ${isSeen ? 'bg-gray-200' : 'bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600'}`}
+                >
+                  <div className="w-full h-full rounded-full overflow-hidden bg-white border-2 border-white">
+                    <img src={avatar} alt={`story-${idx}`} className="w-full h-full object-cover" />
+                  </div>
+                </button>
+            )}) : (
+              <div className="text-sm text-gray-400">У вас пока нет сторис</div>
+            )}
+          </div>
+        </div>
+
         {/* ТАБЫ */}
         <div className="flex justify-center gap-14 border-t border-[#efefef]">
           <button onClick={() => setActiveTab('posts')} className={`flex items-center gap-1.5 py-4 text-[12px] font-semibold tracking-widest uppercase border-t-[1px] -mt-[1px] bg-transparent cursor-pointer ${activeTab === 'posts' ? 'border-black text-black font-bold' : 'border-transparent text-[#8e8e8e]'}`}><Grid className="w-3 h-3" /> Публикации</button>
@@ -286,10 +473,15 @@ export default function MyProfilePage() {
               {activePostsList.map((post: any) => {
                 const mediaFile = post.images?.[0] || post.userImage || ''
                 const pMedia = mediaFile ? (mediaFile.startsWith('http') ? mediaFile : `${IMAGE_BASE_URL}/${mediaFile}`) : '/images/default-avatar.svg'
+                const mediaIsVideo = isVideoFile(mediaFile)
 
                 return (
                   <div key={post.postId || post.id} onClick={() => openPostModal(post.postId || post.id)} className="relative aspect-square bg-black overflow-hidden group cursor-pointer border border-[#efefef]">
-                    <img src={pMedia} alt="post" className="w-full h-full object-cover" />
+                    {mediaIsVideo ? (
+                      <video src={pMedia} className="w-full h-full object-cover" controls playsInline muted loop />
+                    ) : (
+                      <img src={pMedia} alt="post" className="w-full h-full object-cover" />
+                    )}
                     <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-white gap-6 font-semibold z-20">
                       <div className="flex items-center gap-1.5"><Heart fill="white" size={20} /> {post.postLikeCount || 0}</div>
                       <div className="flex items-center gap-1.5"><MessageCircle fill="white" size={20} /> {post.commentCount || 0}</div>
@@ -348,6 +540,147 @@ export default function MyProfilePage() {
           </div>
         </Modal>
 
+        {/* МОДАЛКА ПРОСМОТРА СТОРИС */}
+        <Modal
+          open={storiesModalOpen}
+          onCancel={() => setStoriesModalOpen(false)}
+          footer={null}
+          centered
+          width={540}
+          closeIcon={<CloseIcon className="text-white" />}
+          styles={{ body: { padding: 0, backgroundColor: 'black' } }}
+        >
+          <div className="relative w-full aspect-[9/16] bg-black flex flex-col overflow-hidden select-none">
+            
+            {/* Бэкграунд блюр */}
+            <div className="absolute inset-0 z-0 opacity-50 blur-3xl scale-110 pointer-events-none">
+              {isVideoFile(currentStoryMediaUrl) ? (
+                <video src={currentStoryMediaUrl} className="w-full h-full object-cover" muted />
+              ) : (
+                <img src={currentStoryMediaUrl} className="w-full h-full object-cover" alt="" />
+              )}
+            </div>
+
+            {/* Контент сторис */}
+            <div className="absolute inset-0 z-10 flex items-center justify-center">
+              {isVideoFile(currentStoryMediaUrl) ? (
+                <video 
+                  src={currentStoryMediaUrl} 
+                  autoPlay 
+                  muted={isMuted} 
+                  className="w-full h-full object-contain" 
+                  playsInline 
+                />
+              ) : (
+                <img src={currentStoryMediaUrl} alt="story" className="w-full h-full object-contain" />
+              )}
+            </div>
+
+            {/* Хедер: Прогресс-бары и инфо */}
+            <div className="relative z-20 w-full p-3 bg-gradient-to-b from-black/80 to-transparent">
+              <div className="flex gap-1 mb-3">
+                {myStoriesList.map((_: any, index: number) => (
+                  <div key={index} className="h-[2px] flex-1 bg-white/30 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-white transition-all duration-300 ease-linear"
+                      style={{ width: index < activeStoryIndex ? "100%" : index === activeStoryIndex ? "100%" : "0%" }}
+                    />
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex items-center justify-between text-white">
+                <div className="flex items-center gap-2.5">
+                  <Avatar src={avatar} size="small" className="border border-white/20" />
+                  <span className="font-semibold text-[14px]">{username}</span>
+                  <span className="text-[12px] text-white/60">Ваша история</span>
+                </div>
+
+                {isVideoFile(currentStoryMediaUrl) && (
+                  <button onClick={() => setIsMuted(!isMuted)} className="text-white/90 p-1">
+                    {isMuted ? <VolumeOffIcon sx={{ fontSize: 20 }} /> : <VolumeUpIcon sx={{ fontSize: 20 }} />}
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Навигация (прозрачные зоны для клика) */}
+            <div className="absolute inset-0 z-10 flex">
+              <div onClick={goPrevStory} className="w-1/4 h-full cursor-pointer" />
+              <div className="w-2/4 h-full" />
+              <div onClick={goNextStory} className="w-1/4 h-full cursor-pointer" />
+            </div>
+
+            {/* Стрелки (Desktop) */}
+            <button 
+              onClick={goPrevStory} 
+              className={`absolute left-2 top-1/2 -translate-y-1/2 z-30 bg-white/20 hover:bg-white/40 p-1.5 rounded-full text-white transition-all ${activeStoryIndex === 0 ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
+            >
+              <ChevronLeftIcon />
+            </button>
+            <button 
+              onClick={goNextStory} 
+              className="absolute right-2 top-1/2 -translate-y-1/2 z-30 bg-white/20 hover:bg-white/40 p-1.5 rounded-full text-white transition-all"
+            >
+              <ChevronRightIcon />
+            </button>
+
+            {/* Футер */}
+            <div className="mt-auto relative z-20 w-full p-4 bg-gradient-to-t from-black/80 to-transparent">
+              {currentStoryViews > 0 && (
+                <div className="flex items-center gap-1.5 text-white/90 text-[12px] font-medium mb-3">
+                  <RemoveRedEyeIcon sx={{ fontSize: 16 }} />
+                  <span>Просмотрено: {currentStoryViews}</span>
+                </div>
+              )}
+              
+              <div className="flex items-center gap-4">
+                <div className="flex-1 border border-white/40 rounded-full px-4 py-1.5 text-white/60 text-sm">
+                  Реакции на историю
+                </div>
+                <button 
+                  onClick={async () => {
+                    if (!currentStory) return;
+                    try {
+                      await likeStory(currentStory.id || currentStory.storyId).unwrap();
+                      messageApi.success('Обновлено');
+                    } catch { messageApi.error('Ошибка'); }
+                  }} 
+                  className="text-white"
+                >
+                {currentStory?.isLiked ? (
+                  <FavoriteIcon className="text-red-500" />
+                ) : (
+                  <FavoriteBorderIcon />
+                )}
+                </button>
+                <SendIcon className="text-white -rotate-12" />
+              </div>
+            </div>
+          </div>
+        </Modal>
+
+        <Modal
+          title={<div className="text-center font-bold text-[16px] border-b border-gray-100 pb-3 -mx-6">Новая заметка</div>}
+          open={isNoteModalOpen}
+          onCancel={() => setIsNoteModalOpen(false)}
+          okText="Сохранить"
+          cancelText="Отмена"
+          onOk={handleSaveNote}
+          centered
+          width={450}
+        >
+          <div className="flex flex-col gap-4 pt-4">
+            <Input.TextArea
+              value={noteText}
+              onChange={(e) => setNoteText(e.target.value)}
+              placeholder="Введите текст заметки..."
+              autoSize={{ minRows: 4, maxRows: 8 }}
+              className="text-[14px]"
+            />
+          </div>
+        </Modal>
+
         {/* МОДАЛКА ПРОСМОТРА ПОСТА */}
         <Modal 
           open={isPostDetailsModalOpen} 
@@ -358,7 +691,11 @@ export default function MyProfilePage() {
           {currentPost && (
             <div className="flex flex-col md:flex-row h-[85vh] md:h-[680px] bg-white overflow-hidden rounded-r-md rounded-l-md">
               <div className="w-full md:w-[60%] bg-black flex items-center justify-center h-[50%] md:h-full relative select-none">
-                <img src={modalMediaUrl} alt="Post content" className="w-full h-full object-contain" />
+                {isVideoFile(currentPost?.images?.[0]) ? (
+                  <video src={modalMediaUrl} controls className="w-full h-full object-contain" playsInline />
+                ) : (
+                  <img src={modalMediaUrl} alt="Post content" className="w-full h-full object-contain" />
+                )}
               </div>
 
               <div className="w-full md:w-[40%] flex flex-col h-[50%] md:h-full bg-white text-black border-l border-[#efefef]">
@@ -509,5 +846,5 @@ export default function MyProfilePage() {
 
       </div>
     </div>
-  );
+  )
 }
