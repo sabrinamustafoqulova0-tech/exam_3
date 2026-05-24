@@ -152,7 +152,7 @@ export default function Sidebar() {
   const isLocked = openSearch || openMore;
 
   return (
-    <div className="relative flex min-h-screen bg-white text-black select-none font-sans antialiased">
+    <div className="fixed inset-y-0 left-0 z-30 overflow-visible flex min-h-screen bg-white text-black select-none font-sans antialiased">
       
       {/* ===== LEFT SIDEBAR ===== */}
       <div
