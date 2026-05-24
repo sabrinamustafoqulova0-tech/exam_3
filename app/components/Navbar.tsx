@@ -157,7 +157,8 @@ export default function Sidebar() {
       {/* ===== LEFT SIDEBAR ===== */}
       <div
         className={`
-          flex flex-col justify-between p-3 border-r border-[#e4e4e7] bg-white transition-all duration-300 z-30 relative
+          sticky top-0 h-screen
+          flex flex-col justify-between p-3 border-r border-[#e4e4e7] bg-white transition-all duration-300 z-30
           ${isLocked 
             ? "w-[73px]" 
             : "w-[73px] hover:w-[245px] group shadow-[0_0_10px_rgba(0,0,0,0.01)] hover:shadow-[4px_0_24px_rgba(0,0,0,0.04)]"
@@ -273,7 +274,6 @@ export default function Sidebar() {
               {pathname === "/notifications" ? <FavoriteIcon sx={{ fontSize: 28 }} /> : <FavoriteBorderOutlinedIcon sx={{ fontSize: 28 }} />}
             </div>
             <span className={`text-[15px] tracking-wide whitespace-nowrap ${openSearch ? "hidden" : "opacity-0 group-hover:opacity-100"}`}>
-              Notifications
               Notifications
             </span>
           </Link>

@@ -47,7 +47,7 @@ export const postApi = createApi({
 
     getFollowingPosts: builder.query({
       query: (userId: string) => ({
-        url: `/Post/get-following-post?UserId=${userId}`,
+        url: `/Post/get-following-post?UserId=${userId}&PageNumber=1&PageSize=10`,
         method: "GET",
       }),
       transformResponse: (response: any) => {
