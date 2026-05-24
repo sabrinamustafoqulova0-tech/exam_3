@@ -222,6 +222,7 @@ export default function ExplorePage() {
   const [selectedPostId, setSelectedPostId] = useState<number | null>(null);
   const [selectedPostIndex, setSelectedPostIndex] = useState<number>(-1);
   const [commentText, setCommentText] = useState("");
+  const [deleteCommentId, setDeleteCommentId] = useState<number | null>(null);
   const [myInfo, setMyInfo] = useState<{ userId: string; userName: string } | null>(null);
 
   // Infinite scroll state
@@ -733,6 +734,64 @@ export default function ExplorePage() {
                 </div>
               </>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Delete Comment Confirmation Modal */}
+      {deleteCommentId !== null && (
+        <div style={{
+          position: "fixed", top: 0, left: 0, width: "100%", height: "100%",
+          background: "rgba(0,0,0,0.6)", zIndex: 20000,
+          display: "flex", alignItems: "center", justifyContent: "center",
+          backdropFilter: "blur(4px)",
+          animation: "fadeIn 0.2s ease-out"
+        }} onClick={() => setDeleteCommentId(null)}>
+          <div style={{
+            background: "#fff", 
+            width: 320, 
+            borderRadius: 16, 
+            overflow: "hidden",
+            boxShadow: "0 15px 50px rgba(0,0,0,0.15)",
+            border: "1px solid rgba(0,0,0,0.05)",
+          }} onClick={e => e.stopPropagation()}>
+            <div style={{ padding: "20px 20px 14px 20px", textAlign: "center", borderBottom: "1px solid #f3f4f6" }}>
+              <h3 style={{ margin: "0 0 6px 0", fontWeight: 700, fontSize: 16, color: "#1f2937" }}>Удалить комментарий?</h3>
+              <p style={{ margin: 0, fontSize: 12, color: "#6b7280", lineHeight: 1.4 }}>Это действие нельзя будет отменить.</p>
+            </div>
+            
+            <div style={{ display: "flex", flexDirection: "column" }}>
+              <button 
+                onClick={async () => {
+                  if (deleteCommentId !== null) {
+                    await handleDeleteComment(deleteCommentId);
+                    setDeleteCommentId(null);
+                  }
+                }}
+                style={{
+                  background: "none", border: "none", borderBottom: "1px solid #f3f4f6",
+                  padding: "12px 0", fontSize: 14, fontWeight: 700, color: "#ef4444",
+                  cursor: "pointer", transition: "background 0.2s"
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = "#fef2f2"}
+                onMouseLeave={e => e.currentTarget.style.background = "none"}
+              >
+                Удалить
+              </button>
+              
+              <button 
+                onClick={() => setDeleteCommentId(null)}
+                style={{
+                  background: "none", border: "none",
+                  padding: "12px 0", fontSize: 14, fontWeight: 500, color: "#4b5563",
+                  cursor: "pointer", transition: "background 0.2s"
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = "#f9fafb"}
+                onMouseLeave={e => e.currentTarget.style.background = "none"}
+              >
+                Отмена
+              </button>
+            </div>
           </div>
         </div>
       )}

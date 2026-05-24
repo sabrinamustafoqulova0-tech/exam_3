@@ -129,9 +129,9 @@ export const chatApi = createApi({
     }),
 
     // DELETE /Chat/delete-message?massageId={id}
-    deleteMessage: builder.mutation<void, { messageId: number; chatId: number }>({
-      query: ({ messageId }) => ({
-        url: `/Chat/delete-message?massageId=${messageId}`,
+    deleteMessage: builder.mutation<void, { messageId: number; chatId: number; deleteForEveryone?: boolean }>({
+      query: ({ messageId, deleteForEveryone = true }) => ({
+        url: `/Chat/delete-message?massageId=${messageId}&deleteForEveryone=${deleteForEveryone}`,
         method: "DELETE",
       }),
       invalidatesTags: (_result, _error, { chatId }) => [

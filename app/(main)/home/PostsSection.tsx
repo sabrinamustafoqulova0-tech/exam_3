@@ -12,11 +12,12 @@ import VolumeOffIcon from "@mui/icons-material/VolumeOff";
 import VolumeUpIcon from "@mui/icons-material/VolumeUp";
 import RepeatIcon from "@mui/icons-material/Repeat";
 import AutorenewIcon from "@mui/icons-material/Autorenew";
+import NewMessageModal from "@/app/components/NewMessageModal";
 
 import "swiper/css";
 import "swiper/css/pagination";
 
-import { Api, GetUserId } from "@/app/utils/token";
+import { Api, GetUserId, MyAxios } from "@/app/utils/token";
 
 import {
   useAddCommentMutation,
@@ -164,6 +165,8 @@ const CommentsModal = ({ post, onClose, getCurrentIndex, setPostIndex, toggleMut
   const [replyingTo, setReplyingTo] = useState<number | null>(null);
   const [replyText, setReplyText] = useState("");
   const [replies, setReplies] = useState<Record<number, any[]>>({});
+  const [deleteCommentId, setDeleteCommentId] = useState<number | null>(null);
+  const myUserId = GetUserId();
 
   const [addComment] = useAddCommentMutation();
   const { data } = useGetUsersQuery(undefined);
@@ -231,6 +234,10 @@ const CommentsModal = ({ post, onClose, getCurrentIndex, setPostIndex, toggleMut
             {comments.map((c: any, i: number) => {
               const commentId = c.commentId || i;
               const user = users.find((el: any) => el.id === c.userId);
+              const isOwnComment = (c.userId && myUserId && String(c.userId) === String(myUserId)) ||
+                                   (c.authorId && myUserId && String(c.authorId) === String(myUserId)) ||
+                                   c.userName === "You" ||
+                                   c.userName === "you";
               return (
                 <div key={commentId} className="flex gap-3 group">
                   <img src={user?.avatar ? `${Api}/images/${user.avatar}` : "https://cdn-icons-png.flaticon.com/512/149/149071.png"} className="w-[32px] h-[32px] rounded-full object-cover" alt="" />
@@ -239,6 +246,14 @@ const CommentsModal = ({ post, onClose, getCurrentIndex, setPostIndex, toggleMut
                       <div className="flex-1">
                         <div className="text-[14px] leading-[18px] break-words"><span className="font-semibold mr-2">{user?.userName || c.userName || "User"}</span>{c.comment || c.text}</div>
                       </div>
+                      {isOwnComment && (
+                        <button
+                          onClick={() => setDeleteCommentId(commentId)}
+                          className="text-gray-400 hover:text-gray-600 transition p-1 opacity-0 group-hover:opacity-100 focus:opacity-100"
+                        >
+                          <MoreHorizIcon sx={{ fontSize: 18 }} />
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -247,6 +262,50 @@ const CommentsModal = ({ post, onClose, getCurrentIndex, setPostIndex, toggleMut
           </div>
         </div>
       </div>
+
+      {/* Delete Comment Confirmation Bottom Sheet / Modal */}
+      {deleteCommentId !== null && (
+        <div 
+          className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4 backdrop-blur-xs"
+          onClick={() => setDeleteCommentId(null)}
+        >
+          <div 
+            className="bg-white w-full max-w-[320px] rounded-2xl overflow-hidden shadow-2xl border border-gray-100/50"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex flex-col">
+              <button
+                onClick={async () => {
+                  if (deleteCommentId !== null) {
+                    try {
+                      // Call DELETE API
+                      await MyAxios.delete(`/Post/delete-comment?commentId=${deleteCommentId}`);
+                      // Remove from local list
+                      setComments(prev => prev.filter((item, idx) => {
+                        const id = item.commentId || idx;
+                        return id !== deleteCommentId;
+                      }));
+                    } catch (err) {
+                      console.error("Failed to delete comment:", err);
+                    } finally {
+                      setDeleteCommentId(null);
+                    }
+                  }
+                }}
+                className="w-full py-4 text-sm font-bold text-red-500 hover:bg-red-50 active:bg-red-100 transition text-center border-b border-gray-100 cursor-pointer"
+              >
+                Удалить
+              </button>
+              <button
+                onClick={() => setDeleteCommentId(null)}
+                className="w-full py-4 text-sm font-normal text-black hover:bg-gray-50 active:bg-gray-100 transition text-center cursor-pointer"
+              >
+                Отмена
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -265,6 +324,9 @@ const PostsSection = () => {
   // Лайки
   const [localLikes, setLocalLikes] = useState<Record<number, boolean>>({});
   const [localLikeCounts, setLocalLikeCounts] = useState<Record<number, number>>({});
+
+  const [sharePostId, setSharePostId] = useState<number | null>(null);
+  const [toast, setToast] = useState<{ show: boolean; message: string }>({ show: false, message: "" });
 
   // Репосты / Заметки
   const [isReposted, setIsReposted] = useState<Record<number, boolean>>({});
@@ -516,6 +578,17 @@ const PostsSection = () => {
                      {repostCount}
                   </span>
                   </div>
+
+                  <div className="flex items-center gap-1">
+                    <button 
+                      onClick={() => setSharePostId(post.postId)}
+                      className="hover:scale-105 active:scale-90 transition-all text-gray-900"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-[26px] h-[26px]">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5" />
+                      </svg>
+                    </button>
+                  </div>
                   
                 </div>
 
@@ -574,6 +647,26 @@ const PostsSection = () => {
       {/* ABOUT ACCOUNT MODAL */}
       {aboutPost && (
         <AboutAccountModal post={aboutPost} onClose={() => setAboutPost(null)} />
+      )}
+
+      {/* SHARE MODAL */}
+      <NewMessageModal
+        isOpen={sharePostId !== null}
+        onClose={() => setSharePostId(null)}
+        postId={sharePostId || undefined}
+        postUrl={sharePostId ? `${window.location.origin}/post/${sharePostId}` : undefined}
+        onSent={(msg) => {
+          setToast({ show: true, message: msg });
+          setTimeout(() => setToast({ show: false, message: "" }), 2000);
+        }}
+      />
+
+      {/* TOAST NOTIFICATION */}
+      {toast.show && (
+        <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 bg-black/85 backdrop-blur-md text-white px-6 py-3 rounded-2xl flex items-center gap-2 border border-white/10 shadow-2xl transition-all duration-300 pointer-events-none">
+          <span className="text-emerald-400 font-bold">✓</span>
+          <span className="text-sm font-medium">{toast.message}</span>
+        </div>
       )}
     </>
   );

@@ -126,7 +126,6 @@ export const postApi = chatApi.injectEndpoints({
         method: "POST",
       }),
       invalidatesTags: (_result, _error, postId) => [
-        "Chats",
         { type: "ChatById", id: postId },
       ],
     }),

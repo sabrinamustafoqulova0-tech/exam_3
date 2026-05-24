@@ -17,7 +17,7 @@ import {
 } from '../../services/Profile'
 import { useState, useRef } from 'react'
 import { Modal, Input, message, Skeleton, Avatar, Select } from 'antd'
-import { Grid, Bookmark, Settings, Camera, Plus, User, Heart, MessageCircle, X, Share2, Trash2 } from 'lucide-react'
+import { Grid, Bookmark, Settings, Camera, Plus, User, Heart, MessageCircle, X, Share2, Trash2, MoreHorizontal } from 'lucide-react'
 
 const { TextArea } = Input
 const IMAGE_BASE_URL = process.env.NEXT_PUBLIC_IMAGES || 'https://instagram-api.softclub.tj/images'
@@ -50,6 +50,7 @@ export default function MyProfilePage() {
   const [selectedPostId, setSelectedPostId] = useState<number | null>(null)
   const [isPostDetailsModalOpen, setIsPostDetailsModalOpen] = useState(false)
   const [commentText, setCommentText] = useState('')
+  const [deleteCommentId, setDeleteCommentId] = useState<number | null>(null)
   const [isFollowersModalOpen, setIsFollowersModalOpen] = useState(false)
   const [isFollowingModalOpen, setIsFollowingModalOpen] = useState(false)
   const [likedPostIds, setLikedPostIds] = useState<Record<number, boolean>>({})
@@ -306,9 +307,13 @@ export default function MyProfilePage() {
                   {currentPost?.comments?.map((comment: any) => {
                     const commentAuthor = comment.userName || 'User';
                     const commentTextBody = comment.comment || ''; // Корректный ключ 'comment'
+                    const cid = comment.commentId || comment.postCommentId || comment.id;
+                    const isOwnComment = (comment.userId && myUserId && String(comment.userId) === String(myUserId)) ||
+                                         (currentPost.userId && myUserId && String(currentPost.userId) === String(myUserId)) ||
+                                         commentAuthor === "You" || commentAuthor === "you" || commentAuthor === user?.userName;
 
                     return (
-                      <div key={comment.postCommentId} className="flex gap-3 items-start text-[13px] justify-between group">
+                      <div key={cid} className="flex gap-3 items-start text-[13px] justify-between group">
                         <div className="flex gap-3 items-start flex-1">
                           <div className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center font-bold text-gray-500 uppercase text-[10px] flex-shrink-0">{commentAuthor.charAt(0)}</div>
                           <div className="flex-1">
@@ -316,12 +321,14 @@ export default function MyProfilePage() {
                             <span className="text-gray-700 break-words">{commentTextBody}</span>
                           </div>
                         </div>
-                        <button 
-                          onClick={() => handleDeleteComment(comment.postCommentId)}
-                          className="text-gray-300 hover:text-red-500 bg-transparent border-none cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity p-1"
-                        >
-                          <Trash2 size={14} />
-                        </button>
+                        {isOwnComment && (
+                          <button 
+                            onClick={() => setDeleteCommentId(cid)}
+                            className="text-gray-400 hover:text-gray-600 bg-transparent border-none cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity p-1"
+                          >
+                            <MoreHorizontal size={14} />
+                          </button>
+                        )}
                       </div>
                     )
                   })}

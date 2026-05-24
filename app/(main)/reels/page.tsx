@@ -25,6 +25,7 @@ import {
   useAddFollowingMutation,
   useDeleteFollowingMutation,
 } from "@/app/services/Reels"
+import NewMessageModal from "@/app/components/NewMessageModal"
 
 const API_IMAGE = "https://instagram-api.softclub.tj/images/"
 
@@ -135,6 +136,7 @@ function ReelCard({
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)
   const [shareCount, setShareCount] = useState(() => Math.floor(Math.random() * 480) + 20)
   const [activeCategory, setActiveCategory] = useState<string>("🔥 Popular")
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false)
 
   // Determine media type (Video or Image) from filename
   const isVideo = reel.images
@@ -249,14 +251,14 @@ function ReelCard({
     if (e) e.stopPropagation()
     const nextLiked = !isLiked
     setIsLiked(nextLiked)
-    setLikeCount((prev) => (nextLiked ? prev + 1 : Math.max(0, prev - 1)))
+    setLikeCount((prev: number) => (nextLiked ? prev + 1 : Math.max(0, prev - 1)))
 
     try {
       await likePost(reel.postId).unwrap()
     } catch (err) {
       // rollback if failed
       setIsLiked(!nextLiked)
-      setLikeCount((prev) => (!nextLiked ? prev + 1 : Math.max(0, prev - 1)))
+      setLikeCount((prev: number) => (!nextLiked ? prev + 1 : Math.max(0, prev - 1)))
       triggerToast("Error updating like")
     }
   }
@@ -351,9 +353,11 @@ function ReelCard({
       userImage: null,
       comment: commentText,
       date: new Date().toISOString(),
+      likes: 0,
+      isLiked: false,
     }
 
-    setComments((prev) => [{ ...newComment, likes: 0, isLiked: false }, ...prev])
+    setComments((prev) => [newComment, ...prev])
     setNewCommentText("")
 
     try {
@@ -685,7 +689,7 @@ function ReelCard({
           {/* Share */}
           <div className="flex flex-col items-center gap-1 group">
             <button
-              onClick={handleShare}
+              onClick={() => setIsShareModalOpen(true)}
               className="flex h-11 w-11 items-center justify-center rounded-full transition duration-200 text-black hover:text-black/80 cursor-pointer active:scale-90"
             >
               {/* Sleek paper airplane icon */}
@@ -783,6 +787,17 @@ function ReelCard({
           </div>
         </div>
       </div>
+      
+      <NewMessageModal
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+        postId={reel.postId}
+        postUrl={`${window.location.origin}/reels/${reel.postId}`}
+        onSent={(msg) => {
+          triggerToast(msg);
+          setShareCount(prev => prev + 1);
+        }}
+      />
     </section>
   )
 }
