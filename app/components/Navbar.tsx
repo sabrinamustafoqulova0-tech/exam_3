@@ -32,8 +32,10 @@ import BookmarkBorderIcon from "@mui/icons-material/BookmarkBorder";
 import DarkModeOutlinedIcon from "@mui/icons-material/DarkModeOutlined";
 import ReportProblemOutlinedIcon from "@mui/icons-material/ReportProblemOutlined";
 import LogoutOutlinedIcon from "@mui/icons-material/LogoutOutlined";
+import CircularProgress from "@mui/material/CircularProgress"; // Значок загрузки
 
 import { useGetUsersQuery } from "../services/Search";
+import { useGetMyProfileQuery } from "../services/Profile";
 
 export default function Sidebar() {
   const pathname = usePathname();
@@ -47,6 +49,36 @@ export default function Sidebar() {
   const [query, setQuery] = useState("");
   const [debounced, setDebounced] = useState("");
   const [history, setHistory] = useState<any[]>([]);
+  const [isAvatarLoading, setIsAvatarLoading] = useState(true); // Лоадер для аватарки профиля
+  const [loadingAvatars, setLoadingAvatars] = useState<Set<string>>(new Set()); // Лоадеры для аватарок пользователей
+
+  // ===== API QUERIES =====
+  const { data: myProfile } = useGetMyProfileQuery('');
+
+  const imageBaseUrl = process.env.NEXT_PUBLIC_IMAGES || 'https://instagram-api.softclub.tj/images';
+
+  // Функция для сборки полного пути к картинке аватарки
+  const getFullAvatarUrl = (imgName: string | null | undefined) => {
+    if (!imgName || !imgName.trim()) return "";
+    const rawImage = imgName.trim();
+    return rawImage.startsWith('http') ? rawImage : `${imageBaseUrl}/${rawImage.replace(/^\/+/, '')}`;
+  };
+
+  // Функция для управления загрузкой аватарок пользователей
+  const setAvatarLoading = (userId: string, loading: boolean) => {
+    setLoadingAvatars((prev) => {
+      const newSet = new Set(prev);
+      if (loading) {
+        newSet.add(userId);
+      } else {
+        newSet.delete(userId);
+      }
+      return newSet;
+    });
+  };
+
+  // Проверка: активен ли профиль (обычный /profile или динамический /user/[id])
+  const isProfileActive = pathname === "/profile" || pathname?.startsWith("/user/");
 
   // Close "More" when clicking outside the modal
   useEffect(() => {
@@ -101,21 +133,32 @@ export default function Sidebar() {
   };
 
   const openUser = (user: any) => {
+    if (!user) return;
     saveToHistory(user);
     closeSearch();
-    router.push(`/user/${user.id}`);
+
+    const myId = myProfile?.data?.id ? String(myProfile.data.id) : null;
+    const targetId = user?.id ? String(user.id) : null;
+
+    // Сверяем id пользователя: если это мы, то на /profile, иначе на /user/[id]
+    if (myId && targetId === myId) {
+      router.push("/profile");
+    } else {
+      router.push(`/user/${user.id}`);
+    }
   };
 
   // If search or More is open, sidebar should not expand on hover
   const isLocked = openSearch || openMore;
 
   return (
-    <div className="relative flex h-screen bg-white text-black select-none font-sans antialiased">
+    <div className="fixed inset-y-0 left-0 z-30 overflow-visible flex min-h-screen bg-white text-black select-none font-sans antialiased">
       
       {/* ===== LEFT SIDEBAR ===== */}
       <div
         className={`
-          flex flex-col justify-between p-3 border-r border-[#e4e4e7] bg-white h-screen transition-all duration-300 z-30 relative
+          sticky top-0 h-screen
+          flex flex-col justify-between p-3 border-r border-[#e4e4e7] bg-white transition-all duration-300 z-30
           ${isLocked 
             ? "w-[73px]" 
             : "w-[73px] hover:w-[245px] group shadow-[0_0_10px_rgba(0,0,0,0.01)] hover:shadow-[4px_0_24px_rgba(0,0,0,0.04)]"
@@ -189,19 +232,22 @@ export default function Sidebar() {
               Reels
             </span>
           </Link>
+
+          {/* Explore */}
           <Link
-  href="/expore"
-  className={`flex items-center gap-4 p-3 rounded-xl hover:bg-[#f4f4f5] transition duration-200 ${
-    pathname === "/expore" ? "font-bold text-black bg-[#f4f4f5]" : "text-black"
-  }`}
->
-  <div className={`min-w-[28px] flex justify-center transition-transform duration-200 ${pathname === "/expore" ? "scale-105" : ""}`}>
-    {pathname === "/expore" ? <ExploreIcon sx={{ fontSize: 28 }} /> : <ExploreOutlinedIcon sx={{ fontSize: 28 }} />}
-  </div>
-  <span className={`text-[15px] tracking-wide whitespace-nowrap ${openSearch ? "hidden" : "opacity-0 group-hover:opacity-100"}`}>
-    Explore
-  </span>
-</Link>
+            href="/expore"
+            className={`flex items-center gap-4 p-3 rounded-xl hover:bg-[#f4f4f5] transition duration-200 ${
+              pathname === "/explore" ? "font-bold text-black bg-[#f4f4f5]" : "text-black"
+            }`}
+          >
+            <div className={`min-w-[28px] flex justify-center transition-transform duration-200 ${pathname === "/explore" ? "scale-105" : ""}`}>
+              {pathname === "/explore" ? <ExploreIcon sx={{ fontSize: 28 }} /> : <ExploreOutlinedIcon sx={{ fontSize: 28 }} />}
+            </div>
+            <span className={`text-[15px] tracking-wide whitespace-nowrap ${openSearch ? "hidden" : "opacity-0 group-hover:opacity-100"}`}>
+              Explore
+            </span>
+          </Link>
+
           {/* Messages */}
           <Link
             href="/messages"
@@ -213,7 +259,7 @@ export default function Sidebar() {
               {pathname === "/messages" ? <ChatIcon sx={{ fontSize: 28 }} /> : <ChatOutlinedIcon sx={{ fontSize: 28 }} />}
             </div>
             <span className={`text-[15px] tracking-wide whitespace-nowrap ${openSearch ? "hidden" : "opacity-0 group-hover:opacity-100"}`}>
-             Messages
+              Messages
             </span>
           </Link>
 
@@ -247,19 +293,26 @@ export default function Sidebar() {
             </span>
           </Link>
 
-          {/* Profile */}
+          {/* Profile & profileById */}
           <Link
             href="/profile"
             className={`flex items-center gap-4 p-3 rounded-xl hover:bg-[#f4f4f5] transition duration-200 ${
-              pathname === "/profile" ? "font-bold text-black bg-[#f4f4f5]" : "text-black"
+              isProfileActive ? "font-bold text-black bg-[#f4f4f5]" : "text-black"
             }`}
           >
-            <div className="min-w-[28px] flex justify-center">
+            <div className="min-w-[28px] flex justify-center items-center relative w-7 h-7">
+              {isAvatarLoading && (
+                <div className="absolute inset-0 flex items-center justify-center bg-white rounded-full z-10">
+                  <CircularProgress size={16} thickness={5} className="text-gray-400" />
+                </div>
+              )}
               <img
-                src="https://images.unsplash.com/photo-1534528741775-53994a69daeb"
+                src={getFullAvatarUrl(myProfile?.data?.image) || "https://images.unsplash.com/photo-1534528741775-53994a69daeb"}
                 alt="Profile"
+                onLoad={() => setIsAvatarLoading(false)}
+                onError={() => setIsAvatarLoading(false)}
                 className={`w-7 h-7 rounded-full object-cover transition-transform ${
-                  pathname === "/profile" ? "ring-2 ring-black scale-105" : ""
+                  isProfileActive ? "ring-2 ring-black scale-105" : ""
                 }`}
               />
             </div>
@@ -289,20 +342,7 @@ export default function Sidebar() {
           {openMore && (
             <div
               ref={modalRef}
-              className="
-                absolute
-                bottom-[65px]
-                left-0
-                w-[250px]
-                bg-white
-                rounded-2xl
-                shadow-[0_4px_12px_rgba(0,0,0,0.15)]
-                border
-                border-gray-100
-                py-1.5
-                z-50
-                transition-all
-              "
+              className="absolute bottom-[65px] left-0 w-[250px] bg-white rounded-2xl shadow-[0_4px_12px_rgba(0,0,0,0.15)] border border-gray-100 py-1.5 z-50 transition-all"
             >
               <button className="w-full flex items-center gap-3.5 px-4 py-3.5 hover:bg-[#f4f4f5] transition text-left text-sm font-medium">
                 <SettingsIcon fontSize="small" />
@@ -355,7 +395,7 @@ export default function Sidebar() {
       {/* ===== SEARCH SLIDE-OUT MODAL ===== */}
       <div
         className={`
-          fixed top-0 bottom-0 w-[396px] bg-white border-r border-[#e4e4e7] p-6 pt-8 z-20
+          absolute top-0 bottom-0 w-[396px] bg-white border-r border-[#e4e4e7] p-6 pt-8 z-20
           transition-all duration-300 ease-in-out shadow-[10px_0_30px_rgba(0,0,0,0.03)]
           rounded-r-2xl
           ${openSearch ? "left-[73px] opacity-100 visible" : "left-[-400px] opacity-0 invisible"}
@@ -394,7 +434,7 @@ export default function Sidebar() {
           {query === "" ? (
             <>
               <div className="flex justify-between items-center mb-4 px-1">
-                  <h3 className="font-bold text-sm text-black">Recent</h3>
+                <h3 className="font-bold text-sm text-black">Recent</h3>
                 {history.length > 0 && (
                   <button
                     onClick={() => { setHistory([]); localStorage.removeItem("search_history"); }}
@@ -411,18 +451,38 @@ export default function Sidebar() {
                 </div>
               ) : (
                 <div className="flex flex-col gap-1">
-                  {history.map((u) => (
-                    <div
-                      key={u.id}
-                      onClick={() => openUser(u)}
-                      className="p-2 hover:bg-[#f4f4f5] rounded-lg cursor-pointer flex items-center gap-3 transition"
-                    >
-                      <div className="w-11 h-11 bg-[#f4f4f5] rounded-full flex items-center justify-center font-bold text-gray-500 text-sm">
-                        {u.userName?.substring(0, 2).toUpperCase()}
+                  {history.map((u) => {
+                    const avatarSrc = getFullAvatarUrl(u.avatar || u.image);
+                    return (
+                      <div
+                        key={u.id}
+                        onClick={() => openUser(u)}
+                        className="p-2 hover:bg-[#f4f4f5] rounded-lg cursor-pointer flex items-center gap-3 transition group"
+                      >
+                        <div className="w-11 h-11 bg-[#f4f4f5] rounded-full flex items-center justify-center font-bold text-gray-500 text-sm relative flex-shrink-0">
+                          {loadingAvatars.has(u.id) && (
+                            <div className="absolute inset-0 flex items-center justify-center bg-white rounded-full z-10">
+                              <CircularProgress size={16} thickness={5} className="text-gray-400" />
+                            </div>
+                          )}
+                          {avatarSrc ? (
+                            <img
+                              src={avatarSrc}
+                              alt={u.userName}
+                              onLoad={() => setAvatarLoading(u.id, false)}
+                              onError={() => setAvatarLoading(u.id, false)}
+                              className="w-11 h-11 rounded-full object-cover"
+                            />
+                          ) : (
+                            <span className="text-xs font-bold text-gray-500">
+                              {u.userName?.substring(0, 2).toUpperCase()}
+                            </span>
+                          )}
+                        </div>
+                        <span className="font-semibold text-sm text-black">{u.userName}</span>
                       </div>
-                      <span className="font-semibold text-sm text-black">{u.userName}</span>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </>
@@ -435,18 +495,38 @@ export default function Sidebar() {
                 </div>
               ) : (
                 <div className="flex flex-col gap-1">
-                  {filtered.map((u) => (
-                    <div
-                      key={u.id}
-                      onClick={() => openUser(u)}
-                      className="p-2 hover:bg-[#f4f4f5] rounded-lg cursor-pointer flex items-center gap-3 transition"
-                    >
-                      <div className="w-11 h-11 bg-[#f4f4f5] rounded-full flex items-center justify-center font-bold text-gray-500 text-sm">
-                        {u.userName?.substring(0, 2).toUpperCase()}
+                  {filtered.map((u) => {
+                    const avatarSrc = getFullAvatarUrl(u.avatar || u.image);
+                    return (
+                      <div
+                        key={u.id}
+                        onClick={() => openUser(u)}
+                        className="p-2 hover:bg-[#f4f4f5] rounded-lg cursor-pointer flex items-center gap-3 transition group"
+                      >
+                        <div className="w-11 h-11 bg-[#f4f4f5] rounded-full flex items-center justify-center font-bold text-gray-500 text-sm relative flex-shrink-0">
+                          {loadingAvatars.has(u.id) && (
+                            <div className="absolute inset-0 flex items-center justify-center bg-white rounded-full z-10">
+                              <CircularProgress size={16} thickness={5} className="text-gray-400" />
+                            </div>
+                          )}
+                          {avatarSrc ? (
+                            <img
+                              src={avatarSrc}
+                              alt={u.userName}
+                              onLoad={() => setAvatarLoading(u.id, false)}
+                              onError={() => setAvatarLoading(u.id, false)}
+                              className="w-11 h-11 rounded-full object-cover"
+                            />
+                          ) : (
+                            <span className="text-xs font-bold text-gray-500">
+                              {u.userName?.substring(0, 2).toUpperCase()}
+                            </span>
+                          )}
+                        </div>
+                        <span className="font-semibold text-sm text-black">{u.userName}</span>
                       </div>
-                      <span className="font-semibold text-sm text-black">{u.userName}</span>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </>
